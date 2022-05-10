@@ -24,9 +24,11 @@ class AverageDelayTester(
             val progress = (i.toDouble() * 100.0 / alphas.size).toBigDecimal().setScale(1, RoundingMode.UP).toDouble()
             if (progress > lastPercent) {
                 println("$progress%")
-                lastPercent += 1.0
+                lastPercent += 10.0
             }
             simulator.simulatePolicy(policy, ticks).averageDelay
+        }.also {
+            println("Simulation finished for ${policy::class.java.simpleName}")
         }
     }
 }
@@ -59,14 +61,15 @@ fun main() {
 
     val localOnlyDelays = tester.getAverageDelaysForPolicy(LocalOnlyPolicy)
     val transmitOnlyDelays = tester.getAverageDelaysForPolicy(TransmitOnlyPolicy)
-    val greedyOffloadFirstDelays = tester.getAverageDelaysForPolicy(GreedyPolicyOffloadFirst)
-    val greedyLocalFirstDelays = tester.getAverageDelaysForPolicy(GreedyPolicyLocalFirst)
+    val greedyOffloadFirstDelays = tester.getAverageDelaysForPolicy(GreedyOffloadFirstPolicy)
+    val greedyLocalFirstDelays = tester.getAverageDelaysForPolicy(GreedyLocalFirstPolicy)
 
     val plot = Plot.create()
     plot.plot().add(alphas, localOnlyDelays).color("red").label("Local Only")
     plot.plot().add(alphas, transmitOnlyDelays).color("blue").label("Offload Only")
     plot.plot().add(alphas, greedyOffloadFirstDelays).color("green").label("Greedy (Offload First)")
     plot.plot().add(alphas, greedyLocalFirstDelays).color("cyan").label("Greedy (Local First)")
+
     plot.xlabel("The average arrival rate (alpha)")
     plot.ylabel("The average delay")
     plot.title("Average delay for policies")

@@ -126,7 +126,9 @@ class UserEquipment(
     }
 
     fun makeNewId(): Int {
-        check(lastUsedId < arrivedTaskCount)
+        check(lastUsedId < arrivedTaskCount) {
+            println("Check failed $lastUsedId $arrivedTaskCount")
+        }
         lastUsedId++
         return lastUsedId
     }

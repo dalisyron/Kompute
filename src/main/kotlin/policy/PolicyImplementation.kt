@@ -22,7 +22,7 @@ object TransmitOnlyPolicy : Policy {
     }
 }
 
-object GreedyPolicyLocalFirst : Policy {
+object GreedyLocalFirstPolicy : Policy {
 
     override fun getActionForState(state: UserEquipmentState): Action {
         val canRunLocally = state.cpuState == 0
@@ -40,7 +40,7 @@ object GreedyPolicyLocalFirst : Policy {
     }
 }
 
-object GreedyPolicyOffloadFirst : Policy {
+object GreedyOffloadFirstPolicy : Policy {
 
     override fun getActionForState(state: UserEquipmentState): Action {
         val canRunLocally = state.cpuState == 0
@@ -52,8 +52,25 @@ object GreedyPolicyOffloadFirst : Policy {
             return Action.AddToTransmissionUnit
         } else if (canRunLocally && state.taskQueueLength >= 1) {
             return Action.AddToCPU
-        } else {
-            return Action.NoOperation
         }
+
+        return Action.NoOperation
     }
+}
+
+object LocalFirstPolicy : Policy {
+
+    override fun getActionForState(state: UserEquipmentState): Action {
+        val canRunLocally = state.cpuState == 0
+        val canTransmit = state.tuState == 0
+
+        if (canRunLocally && state.taskQueueLength > 0) {
+            return Action.AddToCPU
+        } else if (canTransmit && state.taskQueueLength > 0) {
+            return Action.AddToTransmissionUnit
+        }
+
+        return Action.NoOperation
+    }
+
 }
