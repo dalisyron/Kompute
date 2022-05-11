@@ -1,13 +1,11 @@
 package simulation
 
-import ue.UserEquipmentTimingInfoProvider
 import environment.EnvironmentParameters
-import helper.runWithProbability
 import logger.Logger
 import policy.Policy
 import ue.UserEquipment
 import ue.UserEquipmentConfig
-import kotlin.random.Random
+import ue.UserEquipmentTimingInfoProvider
 
 class Simulator(
     private val environmentParameters: EnvironmentParameters,

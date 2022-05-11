@@ -2,8 +2,6 @@ package simulation
 
 import environment.EnvironmentParameters
 import logger.Event
-import java.lang.Exception
-import kotlin.system.exitProcess
 
 class SimulationReportCreator(
     val environmentParameters: EnvironmentParameters

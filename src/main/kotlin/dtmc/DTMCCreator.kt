@@ -1,23 +1,23 @@
-/*
 package dtmc
 
+import dtmc.transition.ParameterSymbol
+import dtmc.transition.Symbol
+import dtmc.transition.Transition
 import policy.Action
-import ue.UserEquipmentConfig
 import ue.UserEquipmentState
-import ue.UserEquipmentState.Companion.validate
+import ue.UserEquipmentStateConfig
 import kotlin.math.max
-import kotlin.random.Random
 
 class DTMCCreator(
-    private val config: UserEquipmentConfig
+    val stateConfig: UserEquipmentStateConfig,
 ) {
+    private val stateManager: UserEquipmentStateManager = UserEquipmentStateManager(stateConfig)
 
     fun phi(z: Int): Int {
         return max(z - 1, 0)
     }
 
     fun getPossibleActions(state: UserEquipmentState): List<Action> {
-        state.validate()
         val (taskQueueLength, tuState, cpuState) = state
 
         val res = mutableListOf<Action>(Action.NoOperation)
@@ -39,33 +39,57 @@ class DTMCCreator(
         return res
     }
 
-    private fun getOutcomesForAction(state: UserEquipmentState, action: Action): UserEquipmentState {
-        state
+    private fun getTransitionsForAction(state: UserEquipmentState, action: Action): List<Transition> {
         val isCpuActive = state.cpuState > 0
 
-        return when (action) {
+        val transitions = mutableListOf<Transition>()
+        when (action) {
             Action.NoOperation -> {
                 state
             }
             Action.AddToCPU -> {
-                addToCPU(state)
+                stateManager.addToCPUNextState(state)
             }
             Action.AddToTransmissionUnit -> {
-                addToTransmissionUnit(state)
+                stateManager.addToTransmissionUnitNextState(state)
             }
             Action.AddToBothUnits -> {
                 check(state.taskQueueLength > 1)
-                addToTransmissionUnit(addToCPU(state))
+                with(stateManager) { addToTransmissionUnitNextState(addToCPUNextState(state)) }
             }
         }.let {
-            if (isCpuActive) advanceCPUInState(it) else it
+            if (isCpuActive) stateManager.advanceCPUNextState(it) else it
         }.let {
-            val rand = Random.nextDouble()
-            if (it.tuState > 0 && rand < config.beta) advanceTUInState(it) else it
-        }.let {
-            val rand = Random.nextDouble()
-            if (rand < config.alpha) addTask(it) else it
+            val destinations: List<Pair<UserEquipmentState, List<Symbol>>>
+            if (it.taskQueueLength < stateConfig.taskQueueCapacity) {
+                if (it.tuState == 0) {
+                    destinations = listOf<Pair<UserEquipmentState, List<Symbol>>>(
+                        it to listOf(ParameterSymbol.AlphaC, action),
+                        stateManager.addTaskNextState(it) to listOf(ParameterSymbol.Alpha, action)
+                    )
+                } else {
+                    destinations = listOf<Pair<UserEquipmentState, List<Symbol>>>(
+                        it to listOf(ParameterSymbol.AlphaC, ParameterSymbol.BetaC, action),
+                        stateManager.addTaskNextState(it) to listOf(ParameterSymbol.Alpha, ParameterSymbol.BetaC, action),
+                        stateManager.advanceTUNextState(it) to listOf(ParameterSymbol.AlphaC, ParameterSymbol.Beta, action),
+                        stateManager.addTaskNextState(stateManager.advanceTUNextState(it)) to listOf(ParameterSymbol.Alpha, ParameterSymbol.Beta, action)
+                    )
+                }
+            } else {
+                if (it.tuState == 0) {
+                    destinations = listOf<Pair<UserEquipmentState, List<Symbol>>>(
+                        it to listOf(action)
+                    )
+                } else {
+                    destinations = listOf<Pair<UserEquipmentState, List<Symbol>>>(
+                        it to listOf(ParameterSymbol.BetaC, action),
+                        stateManager.advanceTUNextState(it) to listOf(ParameterSymbol.Beta, action)
+                    )
+                }
+            }
+            return destinations.map { entry ->
+                Transition(state, entry.first, entry.second)
+            }
         }
     }
-
- */
+}

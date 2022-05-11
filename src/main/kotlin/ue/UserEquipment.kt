@@ -4,14 +4,19 @@ import dtmc.UserEquipmentStateManager
 import logger.Event
 import logger.Logger
 import policy.Action
+import ue.UserEquipmentState.Companion.validate
 import kotlin.random.Random
 
 class UserEquipment(
-    val timingInfoProvider: UserEquipmentTimingInfoProvider,
+    private val timingInfoProvider: UserEquipmentTimingInfoProvider,
     private val config: UserEquipmentConfig
 ) {
     val stateManager = UserEquipmentStateManager(config.stateConfig)
     var state: UserEquipmentState = UserEquipmentState(0, 0, 0)
+        set(value) {
+            value.validate()
+            field = value
+        }
     var logger: Logger? = null
 
     var cpuTaskId: Int = -1
@@ -75,7 +80,7 @@ class UserEquipment(
     }
 
     private fun advanceCPU() {
-        check(state.cpuState >= 0 && isCpuActive)
+        check(isCpuActive)
         state = stateManager.advanceCPUNextState(state)
 
         if (state.cpuState == 0) {
@@ -85,7 +90,6 @@ class UserEquipment(
     }
 
     private fun advanceTU() {
-        check(state.tuState > 0)
         state = stateManager.advanceTUNextState(state)
 
         if (state.tuState == 0) {

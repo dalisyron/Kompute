@@ -8,9 +8,9 @@ data class UserEquipmentState(
 
     companion object {
         fun UserEquipmentState.validate() {
-            check(taskQueueLength > 0)
-            check(tuState > 0)
-            check(cpuState > 0)
+            check(taskQueueLength >= 0)
+            check(tuState >= 0)
+            check(cpuState >= 0)
         }
     }
 }
