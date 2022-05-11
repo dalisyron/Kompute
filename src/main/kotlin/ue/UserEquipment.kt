@@ -1,18 +1,16 @@
 package ue
 
-import helper.runWithProbability
+import dtmc.UserEquipmentStateManager
 import logger.Event
 import logger.Logger
 import policy.Action
-import simulation.Simulator
-import java.lang.Exception
 import kotlin.random.Random
-import kotlin.system.exitProcess
 
 class UserEquipment(
     val timingInfoProvider: UserEquipmentTimingInfoProvider,
     private val config: UserEquipmentConfig
 ) {
+    val stateManager = UserEquipmentStateManager(config.stateConfig)
     var state: UserEquipmentState = UserEquipmentState(0, 0, 0)
     var logger: Logger? = null
 
@@ -21,108 +19,96 @@ class UserEquipment(
     var arrivedTaskCount: Int = 0
     var lastUsedId: Int = 0
     var droppedTasks: Int = 0
+    var isCpuActive = false
 
     fun tick(action: Action) {
-        state = getNextState(action)
+        executeAction(action)
     }
 
-    fun addTask(state: UserEquipmentState): UserEquipmentState {
-        check(state.taskQueueLength <= config.taskQueueCapacity)
+    private fun executeAction(action: Action) {
+        isCpuActive = state.cpuState > 0
 
-        if (state.taskQueueLength == config.taskQueueCapacity) {
-            System.err.println("Warning! Max queue capacity was reached. Task was dropped.")
-            droppedTasks += 1
-            return state
-        } else {
-            arrivedTaskCount++
-            logger?.log(Event.TaskArrival(arrivedTaskCount, timingInfoProvider.getCurrentTimeslot()))
-            return state.copy(
-                taskQueueLength = state.taskQueueLength + 1
-            )
-        }
-    }
-
-    private fun getNextState(action: Action): UserEquipmentState {
-        return when (action) {
+        // 1. Apply action
+        when (action) {
             Action.NoOperation -> {
-                state.let {
-                    if (it.cpuState > 0) advanceCPUInState(it) else it
-                }
+                // NOP
             }
             Action.AddToCPU -> {
-                addToCPU(state)
+                addToCPU()
             }
             Action.AddToTransmissionUnit -> {
-                addToTransmissionUnit(state).let {
-                    if (it.cpuState > 0) advanceCPUInState(it) else it
-                }
+                addToTransmissionUnit()
             }
             Action.AddToBothUnits -> {
                 check(state.taskQueueLength > 1)
-                addToTransmissionUnit(addToCPU(state))
+                addToTransmissionUnit()
+                addToCPU()
             }
-        }.let {
-            val rand = Random.nextDouble()
-            if (it.tuState > 0 && rand < config.beta) advanceTUInState(it) else it
-        }.let {
-            val rand = Random.nextDouble()
-            if (rand < config.alpha) addTask(it) else it
+        }
+
+        // 2. Advance UE components
+        if (isCpuActive)
+            advanceCPU()
+
+        val pTransmit = Random.nextDouble()
+        if (state.tuState > 0 && pTransmit < config.componentsConfig.beta)
+            advanceTU()
+
+        // 3. Add new task with probability alpha
+        val rand = Random.nextDouble()
+        if (rand < config.componentsConfig.alpha)
+            addTask()
+    }
+
+    fun addTask() {
+        arrivedTaskCount++
+        val id = arrivedTaskCount
+        logger?.log(Event.TaskArrival(id, timingInfoProvider.getCurrentTimeslot()))
+
+        try {
+            state = stateManager.addTaskNextState(state)
+        } catch (e: UserEquipmentStateManager.TaskQueueFullException) {
+            System.err.println("Warning! Max queue capacity was reached. Dropping task.")
+            logger?.log(Event.TaskDropped(id, timingInfoProvider.getCurrentTimeslot()))
+            droppedTasks += 1
         }
     }
 
-    private fun advanceCPUInState(inputState: UserEquipmentState): UserEquipmentState {
-        check(inputState.cpuState > 0)
-        val nextCpuState: Int
-        if (inputState.cpuState == config.cpuNumberOfSections - 1) {
+    private fun advanceCPU() {
+        check(state.cpuState >= 0 && isCpuActive)
+        state = stateManager.advanceCPUNextState(state)
+
+        if (state.cpuState == 0) {
             logger?.log(Event.TaskProcessedByCPU(cpuTaskId, timingInfoProvider.getCurrentTimeslot()))
             cpuTaskId = -1
-            nextCpuState = 0
-        } else {
-            nextCpuState = inputState.cpuState + 1
         }
-        return inputState.copy(
-            cpuState = nextCpuState
-        )
     }
 
-    private fun advanceTUInState(inputState: UserEquipmentState): UserEquipmentState {
-        check(inputState.tuState > 0)
-        val nextTuState: Int
-        if (inputState.tuState == config.tuNumberOfPackets) {
+    private fun advanceTU() {
+        check(state.tuState > 0)
+        state = stateManager.advanceTUNextState(state)
+
+        if (state.tuState == 0) {
             logger?.log(Event.TaskTransmittedByTU(tuTaskId, timingInfoProvider.getCurrentTimeslot()))
             tuTaskId = -1
-            nextTuState = 0
-        } else {
-            nextTuState = inputState.tuState + 1
         }
-        return inputState.copy(
-            tuState = nextTuState
-        )
     }
 
-    private fun addToTransmissionUnit(state: UserEquipmentState): UserEquipmentState {
-        check(state.tuState == 0)
+    private fun addToTransmissionUnit() {
         check(tuTaskId == -1)
-
         tuTaskId = makeNewId()
+        state = stateManager.addToTransmissionUnitNextState(state)
 
         logger?.log(Event.TaskSentToTU(tuTaskId, timingInfoProvider.getCurrentTimeslot()))
-        return state.copy(
-            taskQueueLength = state.taskQueueLength - 1,
-            tuState = 1
-        )
     }
 
-    private fun addToCPU(state: UserEquipmentState): UserEquipmentState {
-        check(state.cpuState == 0)
+    private fun addToCPU() {
         check(cpuTaskId == -1)
         cpuTaskId = makeNewId()
+        state = stateManager.addToCPUNextState(state)
 
         logger?.log(Event.TaskSentToCPU(cpuTaskId, timingInfoProvider.getCurrentTimeslot()))
-        return state.copy(
-            taskQueueLength = state.taskQueueLength - 1,
-            cpuState = 1
-        )
+        isCpuActive = true
     }
 
     fun makeNewId(): Int {
@@ -140,4 +126,5 @@ class UserEquipment(
         arrivedTaskCount = 0
         lastUsedId = 0
     }
+
 }

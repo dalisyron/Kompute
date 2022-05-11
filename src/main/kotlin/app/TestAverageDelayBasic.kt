@@ -4,7 +4,9 @@ import com.github.sh0nk.matplotlib4j.Plot
 import environment.EnvironmentParameters
 import policy.*
 import simulation.Simulator
+import ue.UserEquipmentComponentsConfig
 import ue.UserEquipmentConfig
+import ue.UserEquipmentStateConfig
 import java.math.RoundingMode
 
 class AverageDelayTester(
@@ -19,7 +21,7 @@ class AverageDelayTester(
         return alphas.mapIndexed { i: Int, alpha: Double ->
             val simulator = Simulator(
                 environmentParameters = environmentParameters,
-                userEquipmentConfig = baseUserEquipmentConfig.copy(alpha = alpha)
+                userEquipmentConfig = baseUserEquipmentConfig.copy(componentsConfig = baseUserEquipmentConfig.componentsConfig.copy(alpha = alpha))
             )
             val progress = (i.toDouble() * 100.0 / alphas.size).toBigDecimal().setScale(1, RoundingMode.UP).toDouble()
             if (progress > lastPercent) {
@@ -45,11 +47,15 @@ fun main() {
         nLocal = 17
     )
     val userEquipmentConfig = UserEquipmentConfig(
-        taskQueueCapacity = 10000000, // set to some big number,
-        tuNumberOfPackets = 1,
-        cpuNumberOfSections = 17,
-        alpha = 0.0,
-        beta = 0.4
+        stateConfig = UserEquipmentStateConfig(
+            taskQueueCapacity = 10000000, // set to some big number,
+            tuNumberOfPackets = 1,
+            cpuNumberOfSections = 17
+        ),
+        componentsConfig = UserEquipmentComponentsConfig(
+            alpha = 0.0,
+            beta = 0.4
+        )
     )
 
     val tester = AverageDelayTester(
