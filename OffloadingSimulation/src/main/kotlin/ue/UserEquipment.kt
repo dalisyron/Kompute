@@ -66,15 +66,14 @@ class UserEquipment(
     }
 
     fun addTask() {
-        arrivedTaskCount++
-        val id = arrivedTaskCount
-        logger?.log(Event.TaskArrival(id, timingInfoProvider.getCurrentTimeslot()))
-
         try {
             state = stateManager.addTaskNextState(state)
+            arrivedTaskCount++
+            val id = arrivedTaskCount
+            logger?.log(Event.TaskArrival(id, timingInfoProvider.getCurrentTimeslot()))
         } catch (e: UserEquipmentStateManager.TaskQueueFullException) {
             System.err.println("Warning! Max queue capacity was reached. Dropping task.")
-            logger?.log(Event.TaskDropped(id, timingInfoProvider.getCurrentTimeslot()))
+            logger?.log(Event.TaskDropped(-1, timingInfoProvider.getCurrentTimeslot()))
             droppedTasks += 1
         }
     }
