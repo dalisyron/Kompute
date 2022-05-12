@@ -48,7 +48,7 @@ fun main() {
     )
     val userEquipmentConfig = UserEquipmentConfig(
         stateConfig = UserEquipmentStateConfig(
-            taskQueueCapacity = 100000000, // set to some big number,
+            taskQueueCapacity = 50, // set to some big number,
             tuNumberOfPackets = 1,
             cpuNumberOfSections = 17
         ),
@@ -61,17 +61,17 @@ fun main() {
     val tester = AverageDelayTester(
         environmentParameters,
         userEquipmentConfig,
-        100_000,
+        2000_000,
         alphas
     )
 
-    val localOnlyDelays = tester.getAverageDelaysForPolicy(LocalOnlyPolicy)
+    // val localOnlyDelays = tester.getAverageDelaysForPolicy(LocalOnlyPolicy)
     val transmitOnlyDelays = tester.getAverageDelaysForPolicy(TransmitOnlyPolicy)
     val greedyOffloadFirstDelays = tester.getAverageDelaysForPolicy(GreedyOffloadFirstPolicy)
     val greedyLocalFirstDelays = tester.getAverageDelaysForPolicy(GreedyLocalFirstPolicy)
 
     val plot = Plot.create()
-    plot.plot().add(alphas, localOnlyDelays).color("red").label("Local Only")
+    // plot.plot().add(alphas, localOnlyDelays).color("red").label("Local Only")
     plot.plot().add(alphas, transmitOnlyDelays).color("blue").label("Offload Only")
     plot.plot().add(alphas, greedyOffloadFirstDelays).color("green").label("Greedy (Offload First)")
     plot.plot().add(alphas, greedyLocalFirstDelays).color("cyan").label("Greedy (Local First)")
