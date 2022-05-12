@@ -1,5 +1,6 @@
 package dtmc.transition
 
+import dtmc.symbol.Symbol
 import ue.UserEquipmentState
 
 data class Transition(

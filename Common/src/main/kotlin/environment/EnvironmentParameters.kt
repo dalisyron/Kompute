@@ -1,6 +1,6 @@
 package environment
 
-data class EnvironmentParameters(
+public data class EnvironmentParameters(
     val nCloud: Int,
     val tRx: Double,
     val eta: Double,

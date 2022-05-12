@@ -1,4 +1,4 @@
-package dtmc.transition
+package dtmc.symbol
 
 interface Symbol
 

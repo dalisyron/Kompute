@@ -1,6 +1,6 @@
 package policy
 
-import dtmc.transition.Symbol
+import dtmc.symbol.Symbol
 
 sealed class Action : Symbol {
     object NoOperation : Action()

@@ -1,16 +1,11 @@
-import com.google.common.truth.MultimapSubject
-import com.google.common.truth.Truth
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import dtmc.DTMCCreator
-import dtmc.UserEquipmentStateManager
 import dtmc.transition.Edge
-import dtmc.transition.ParameterSymbol
-import dtmc.transition.Symbol
-import org.junit.jupiter.api.Assertions
+import dtmc.symbol.ParameterSymbol
+import dtmc.symbol.Symbol
 import org.junit.jupiter.api.Test
 import policy.Action
-import ue.UserEquipmentComponentsConfig
 import ue.UserEquipmentState
 import ue.UserEquipmentStateConfig
 

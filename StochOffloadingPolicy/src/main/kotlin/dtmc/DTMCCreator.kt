@@ -1,5 +1,7 @@
 package dtmc
 
+import dtmc.symbol.ParameterSymbol
+import dtmc.symbol.Symbol
 import dtmc.transition.*
 import policy.Action
 import ue.UserEquipmentState
@@ -97,7 +99,7 @@ class DTMCCreator(
             if (it.taskQueueLength < stateConfig.taskQueueCapacity) {
                 if (it.tuState == 0) {
                     destinations = listOf<Pair<UserEquipmentState, List<Symbol>>>(
-                        it to listOf(ParameterSymbol.AlphaC, action),
+                        it to listOf<Symbol>(ParameterSymbol.AlphaC, action),
                         stateManager.addTaskNextState(it) to listOf(ParameterSymbol.Alpha, action)
                     )
                 } else {
