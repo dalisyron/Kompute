@@ -11,7 +11,8 @@ class UserEquipment(
     private val timingInfoProvider: UserEquipmentTimingInfoProvider,
     private val config: UserEquipmentConfig
 ) {
-    val stateManager = UserEquipmentStateManager(config.stateConfig)
+    private val stateManager = UserEquipmentStateManager(config.stateConfig)
+
     var state: UserEquipmentState = UserEquipmentState(0, 0, 0)
         set(value) {
             value.validate()

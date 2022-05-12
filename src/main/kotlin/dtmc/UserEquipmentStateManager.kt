@@ -6,6 +6,7 @@ import ue.UserEquipmentStateConfig
 class UserEquipmentStateManager(private val config: UserEquipmentStateConfig) {
 
     fun addTaskNextState(state: UserEquipmentState): UserEquipmentState {
+        // TODO test this
         if (state.taskQueueLength == config.taskQueueCapacity) {
             throw TaskQueueFullException()
         }

@@ -48,7 +48,7 @@ fun main() {
     )
     val userEquipmentConfig = UserEquipmentConfig(
         stateConfig = UserEquipmentStateConfig(
-            taskQueueCapacity = 10000000, // set to some big number,
+            taskQueueCapacity = 100000000, // set to some big number,
             tuNumberOfPackets = 1,
             cpuNumberOfSections = 17
         ),
