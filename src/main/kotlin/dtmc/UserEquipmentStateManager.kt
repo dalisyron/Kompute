@@ -47,8 +47,22 @@ class UserEquipmentStateManager(private val config: UserEquipmentStateConfig) {
 
         return state.copy(
             taskQueueLength = state.taskQueueLength - 1,
-            cpuState = 0
+            cpuState = -1
         )
+    }
+
+    fun advanceCPUIfActiveNextState(state: UserEquipmentState): UserEquipmentState {
+        return if (state.cpuState > 0) {
+            advanceCPUNextState(state)
+        } else if (state.cpuState == -1) {
+            state.copy(
+                cpuState = 1
+            )
+        } else if (state.cpuState == 0) {
+            state
+        } else {
+            throw IllegalStateException()
+        }
     }
 
     class TaskQueueFullException : IllegalStateException()

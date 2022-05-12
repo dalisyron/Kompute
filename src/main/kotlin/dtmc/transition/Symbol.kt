@@ -11,4 +11,8 @@ sealed class ParameterSymbol : Symbol {
     object AlphaC : ParameterSymbol()
 
     object BetaC : ParameterSymbol()
+
+    override fun toString(): String {
+        return javaClass.simpleName
+    }
 }

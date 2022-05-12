@@ -2,8 +2,12 @@ package dtmc.transition
 
 import ue.UserEquipmentState
 
-class Transition(
+data class Transition(
     val source: UserEquipmentState,
     val dest: UserEquipmentState,
-    val edgeSymbols: List<Symbol>
+    val transitionSymbols: List<List<Symbol>>
 )
+
+fun Transition.toEdge(): Edge {
+    return Edge(dest = dest, edgeSymbols = transitionSymbols)
+}

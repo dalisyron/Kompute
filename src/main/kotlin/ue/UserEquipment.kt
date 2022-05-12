@@ -52,8 +52,7 @@ class UserEquipment(
         }
 
         // 2. Advance UE components
-        if (isCpuActive)
-            advanceCPU()
+        advanceCPUIfActive()
 
         val pTransmit = Random.nextDouble()
         if (state.tuState > 0 && pTransmit < config.componentsConfig.beta)
@@ -79,10 +78,16 @@ class UserEquipment(
         }
     }
 
-    private fun advanceCPU() {
-        check(isCpuActive)
-        state = stateManager.advanceCPUNextState(state)
+    private fun advanceCPUIfActive() {
+        if (state.cpuState == 0) {
+            return
+        }
+        if (state.cpuState == -1) {
+            state = state.copy(cpuState = 1)
+            return
+        }
 
+        state = stateManager.advanceCPUNextState(state)
         if (state.cpuState == 0) {
             logger?.log(Event.TaskProcessedByCPU(cpuTaskId, timingInfoProvider.getCurrentTimeslot()))
             cpuTaskId = -1

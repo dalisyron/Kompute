@@ -1,23 +1,57 @@
 package dtmc
 
-import dtmc.transition.ParameterSymbol
-import dtmc.transition.Symbol
-import dtmc.transition.Transition
+import dtmc.transition.*
 import policy.Action
 import ue.UserEquipmentState
 import ue.UserEquipmentStateConfig
-import kotlin.math.max
+import ue.UserEquipmentStateConfig.Companion.allStates
+import java.lang.IllegalStateException
+
+data class DiscreteTimeMarkovChain(
+    val stateConfig: UserEquipmentStateConfig,
+    val adjacencyList: Map<UserEquipmentState, List<Edge>>
+)
 
 class DTMCCreator(
-    val stateConfig: UserEquipmentStateConfig,
+    private val stateConfig: UserEquipmentStateConfig,
 ) {
     private val stateManager: UserEquipmentStateManager = UserEquipmentStateManager(stateConfig)
 
-    fun phi(z: Int): Int {
-        return max(z - 1, 0)
+    fun create(): DiscreteTimeMarkovChain {
+        println("Create called")
+        val adjacencyList: Map<UserEquipmentState, List<Edge>> =
+            stateConfig.allStates().associateWith { getUniqueEdgesForState(it) }
+
+        return DiscreteTimeMarkovChain(
+            stateConfig = stateConfig,
+            adjacencyList = adjacencyList
+        )
     }
 
-    fun getPossibleActions(state: UserEquipmentState): List<Action> {
+    private fun getEdgesForState(state: UserEquipmentState): List<Edge> {
+        return getPossibleActions(state)
+            .map { action -> getTransitionsForAction(state, action) }
+            .flatten().map { it.toEdge() }
+    }
+
+    private fun getUniqueEdgesForState(state: UserEquipmentState): List<Edge> {
+        val edges = getEdgesForState(state)
+
+        val uniqueEdges: List<Edge> = edges.groupBy { edge -> edge.dest }
+            .mapValues {
+                val (dest: UserEquipmentState, edgeList: List<Edge>) = it
+                Edge(
+                    dest = dest,
+                    edgeSymbols = edgeList.map { edge -> edge.edgeSymbols }.flatten()
+                )
+            }
+            .values
+            .toList()
+
+        return uniqueEdges
+    }
+
+    private fun getPossibleActions(state: UserEquipmentState): List<Action> {
         val (taskQueueLength, tuState, cpuState) = state
 
         val res = mutableListOf<Action>(Action.NoOperation)
@@ -33,16 +67,17 @@ class DTMCCreator(
 
         if (taskQueueLength >= 2) {
             if (tuState == 0 && cpuState == 0)
-                res.add(Action.AddToTransmissionUnit)
+                res.add(Action.AddToBothUnits)
         }
 
         return res
     }
 
     private fun getTransitionsForAction(state: UserEquipmentState, action: Action): List<Transition> {
-        val isCpuActive = state.cpuState > 0
+        if (state == UserEquipmentState(2, 0, 0)) {
+            println("Called getTransitions for $state and $action")
+        }
 
-        val transitions = mutableListOf<Transition>()
         when (action) {
             Action.NoOperation -> {
                 state
@@ -58,7 +93,7 @@ class DTMCCreator(
                 with(stateManager) { addToTransmissionUnitNextState(addToCPUNextState(state)) }
             }
         }.let {
-            if (isCpuActive) stateManager.advanceCPUNextState(it) else it
+            stateManager.advanceCPUIfActiveNextState(it)
         }.let {
             val destinations: List<Pair<UserEquipmentState, List<Symbol>>>
             if (it.taskQueueLength < stateConfig.taskQueueCapacity) {
@@ -70,9 +105,21 @@ class DTMCCreator(
                 } else {
                     destinations = listOf<Pair<UserEquipmentState, List<Symbol>>>(
                         it to listOf(ParameterSymbol.AlphaC, ParameterSymbol.BetaC, action),
-                        stateManager.addTaskNextState(it) to listOf(ParameterSymbol.Alpha, ParameterSymbol.BetaC, action),
-                        stateManager.advanceTUNextState(it) to listOf(ParameterSymbol.AlphaC, ParameterSymbol.Beta, action),
-                        stateManager.addTaskNextState(stateManager.advanceTUNextState(it)) to listOf(ParameterSymbol.Alpha, ParameterSymbol.Beta, action)
+                        stateManager.addTaskNextState(it) to listOf(
+                            ParameterSymbol.Alpha,
+                            ParameterSymbol.BetaC,
+                            action
+                        ),
+                        stateManager.advanceTUNextState(it) to listOf(
+                            ParameterSymbol.AlphaC,
+                            ParameterSymbol.Beta,
+                            action
+                        ),
+                        stateManager.addTaskNextState(stateManager.advanceTUNextState(it)) to listOf(
+                            ParameterSymbol.Alpha,
+                            ParameterSymbol.Beta,
+                            action
+                        )
                     )
                 }
             } else {
@@ -87,8 +134,18 @@ class DTMCCreator(
                     )
                 }
             }
+
+            destinations.forEach {
+                val (ueState, symbolList) = it
+                var i = 1
+                if (state == UserEquipmentState(2, 0, 0) && ueState == UserEquipmentState(1, 1, 0)) {
+                    println("Destination $i = $ueState for $state: $symbolList")
+                    i += 1
+                }
+            }
+
             return destinations.map { entry ->
-                Transition(state, entry.first, entry.second)
+                Transition(state, entry.first, listOf(entry.second))
             }
         }
     }

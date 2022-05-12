@@ -10,4 +10,8 @@ sealed class Action : Symbol {
     object AddToTransmissionUnit : Action()
 
     object AddToBothUnits : Action()
+
+    override fun toString(): String {
+        return javaClass.simpleName
+    }
 }

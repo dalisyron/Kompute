@@ -10,7 +10,11 @@ data class UserEquipmentState(
         fun UserEquipmentState.validate() {
             check(taskQueueLength >= 0)
             check(tuState >= 0)
-            check(cpuState >= 0)
+            check(cpuState >= -1)
         }
+    }
+
+    override fun toString(): String {
+        return "($taskQueueLength, $tuState, $cpuState)"
     }
 }
