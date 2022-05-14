@@ -1,9 +1,21 @@
 package ue
 
+import environment.EnvironmentParameters
+
 data class UserEquipmentConfig(
     val stateConfig: UserEquipmentStateConfig,
     val componentsConfig: UserEquipmentComponentsConfig
-)
+) {
+    val taskQueueCapacity: Int = stateConfig.taskQueueCapacity
+    val tuNumberOfPackets: Int = stateConfig.tuNumberOfPackets
+    val cpuNumberOfSections: Int = stateConfig.cpuNumberOfSections
+    val beta: Double = componentsConfig.beta
+    val alpha: Double = componentsConfig.alpha
+    val eta: Double = componentsConfig.eta
+    val pTx: Double = componentsConfig.pTx
+    val pLoc: Double = componentsConfig.pLoc
+    val nLocal: Int = componentsConfig.nLocal
+}
 
 data class UserEquipmentStateConfig(
     val taskQueueCapacity: Int,
@@ -29,5 +41,29 @@ data class UserEquipmentStateConfig(
 
 data class UserEquipmentComponentsConfig(
     val beta: Double,
-    val alpha: Double
+    val alpha: Double,
+    val eta: Double,
+    val pTx: Double,
+    val pLoc: Double,
+    val nLocal: Int
 )
+
+data class OffloadingSystemConfig(
+    val userEquipmentConfig: UserEquipmentConfig,
+    val environmentParameters: EnvironmentParameters,
+    val pMax: Double
+) {
+    val taskQueueCapacity: Int = userEquipmentConfig.stateConfig.taskQueueCapacity
+    val tuNumberOfPackets: Int = userEquipmentConfig.stateConfig.tuNumberOfPackets
+    val cpuNumberOfSections: Int = userEquipmentConfig.stateConfig.cpuNumberOfSections
+    val beta: Double = userEquipmentConfig.componentsConfig.beta
+    val alpha: Double = userEquipmentConfig.componentsConfig.alpha
+    val eta: Double = userEquipmentConfig.componentsConfig.eta
+    val pTx: Double = userEquipmentConfig.componentsConfig.pTx
+    val pLoc: Double = userEquipmentConfig.componentsConfig.pLoc
+    val nLocal: Int = userEquipmentConfig.componentsConfig.nLocal
+    val nCloud: Int = environmentParameters.nCloud
+    val tRx: Double = environmentParameters.tRx
+
+    val stateConfig = userEquipmentConfig.stateConfig
+}

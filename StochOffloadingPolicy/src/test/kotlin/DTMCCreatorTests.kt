@@ -442,4 +442,16 @@ internal class DTMCCreatorTests {
             listOf(ParameterSymbol.Alpha, Action.NoOperation, ParameterSymbol.Beta)
         )
     }
+
+    @Test
+    fun findDoubleLabel() {
+        val chain = creator.create()
+
+        chain.adjacencyList.forEach { state: UserEquipmentState, edgeList: List<Edge> ->
+            edgeList.map { it.edgeSymbols }.forEach {
+                assertThat(it)
+                    .hasSize(1)
+            }
+        }
+    }
 }

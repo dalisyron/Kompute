@@ -32,7 +32,7 @@ class DTMCCreator(
 
 
     fun getEdgesForState(state: UserEquipmentState): List<Edge> {
-        return getPossibleActions(state)
+        return Companion.getPossibleActions(state)
             .map { action -> getTransitionsForAction(state, action) }
             .flatten().map { it.toEdge() }
     }
@@ -52,28 +52,6 @@ class DTMCCreator(
             .toList()
 
         return uniqueEdges
-    }
-
-    private fun getPossibleActions(state: UserEquipmentState): List<Action> {
-        val (taskQueueLength, tuState, cpuState) = state
-
-        val res = mutableListOf<Action>(Action.NoOperation)
-
-        if (taskQueueLength >= 1) {
-            if (tuState == 0) {
-                res.add(Action.AddToTransmissionUnit)
-            }
-            if (cpuState == 0) {
-                res.add(Action.AddToCPU)
-            }
-        }
-
-        if (taskQueueLength >= 2) {
-            if (tuState == 0 && cpuState == 0)
-                res.add(Action.AddToBothUnits)
-        }
-
-        return res
     }
 
     private fun getTransitionsForAction(state: UserEquipmentState, action: Action): List<Transition> {
@@ -138,6 +116,30 @@ class DTMCCreator(
             return destinations.map { entry ->
                 Transition(state, entry.first, listOf(entry.second))
             }
+        }
+    }
+
+    companion object {
+        fun getPossibleActions(state: UserEquipmentState): List<Action> {
+            val (taskQueueLength, tuState, cpuState) = state
+
+            val res = mutableListOf<Action>(Action.NoOperation)
+
+            if (taskQueueLength >= 1) {
+                if (tuState == 0) {
+                    res.add(Action.AddToTransmissionUnit)
+                }
+                if (cpuState == 0) {
+                    res.add(Action.AddToCPU)
+                }
+            }
+
+            if (taskQueueLength >= 2) {
+                if (tuState == 0 && cpuState == 0)
+                    res.add(Action.AddToBothUnits)
+            }
+
+            return res
         }
     }
 }
