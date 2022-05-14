@@ -1,5 +1,0 @@
-rootProject.name = 'OffloadingProject'
-include 'OffloadingSimulation'
-include 'Common'
-include 'StochOffloadingPolicy'
-
