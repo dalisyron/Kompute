@@ -78,7 +78,7 @@ class OptimalPolicyFinder(
 
             val solution = LPSolver.solve(linearProgram)
 
-            if (optimalSolution == null || solution.objectiveValue > optimalSolution.objectiveValue) {
+            if (optimalSolution == null || solution.objectiveValue < optimalSolution.objectiveValue) {
                 optimalSolution = solution
             }
         }
