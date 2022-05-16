@@ -1,9 +1,13 @@
 import com.google.ortools.Loader
+import com.google.ortools.linearsolver.MPConstraint
 import kotlin.jvm.JvmStatic
 import com.google.ortools.linearsolver.MPSolver
 import com.google.ortools.linearsolver.MPSolver.ResultStatus // [END import]
 
-/** Minimal Linear Programming example to showcase calling the solver.  */
+fun MPSolver.makeEqualityConstraint(rhs: Double, name: String): MPConstraint {
+    return makeConstraint(rhs, rhs, name)
+}
+
 object SimpleLpProgram {
     @JvmStatic
     fun main(args: Array<String>) {

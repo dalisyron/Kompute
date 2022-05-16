@@ -2,6 +2,7 @@ package stochastic.dtmc
 
 import dtmc.symbol.Symbol
 import policy.Action
+import ue.OffloadingSystemConfig
 import ue.UserEquipmentState
 import ue.UserEquipmentStateConfig
 import ue.UserEquipmentStateConfig.Companion.allStates
@@ -24,12 +25,6 @@ data class SymbolFraction(
 class IndependentTransitionCalculator(
     private val stateConfig: UserEquipmentStateConfig
 ) {
-    val allActions = listOf(
-        Action.NoOperation,
-        Action.AddToCPU,
-        Action.AddToTransmissionUnit,
-        Action.AddToBothUnits
-    )
     val creator: DTMCCreator = DTMCCreator(stateConfig)
 
     val itSymbols: MutableMap<IndexIT, SymbolFraction> = mutableMapOf()
@@ -53,28 +48,15 @@ class IndependentTransitionCalculator(
         if (destSymbols == null) {
             return SymbolFraction(null, null)
         } else {
+            val top = destSymbols!!.map { symbolTerm -> symbolTerm.filter { it != action }}
+            val bottom = allOutcomesWithSourceAndAction.flatten().map { symbolTerm -> symbolTerm.filter { it != action } }
+
+            // if (top.any {it.isEmpty()}) { println("$source -> $dest with $action :: $destSymbols / ${allOutcomesWithSourceAndAction.flatten()}") }
             return SymbolFraction(
-                top = destSymbols!!.map { symbolTerm -> symbolTerm.filter { it != action }},
-                bottom = allOutcomesWithSourceAndAction.flatten().map { symbolTerm -> symbolTerm.filter { it != action } }
+                top = top,
+                bottom = bottom
             )
         }
 
-    }
-
-    fun calculate() {
-        forAllTriplets { source: UserEquipmentState, dest: UserEquipmentState, action: Action ->
-            val indexIT = IndexIT(source, dest, action)
-            itSymbols[indexIT] = getIndependentTransitionFraction(source, dest, action)
-        }
-    }
-
-    fun forAllTriplets(block: (source: UserEquipmentState, dest: UserEquipmentState, action: Action) -> Unit) {
-        stateConfig.allStates().forEach { source ->
-            stateConfig.allStates().forEach { dest ->
-                allActions.forEach { action ->
-                    block(source, dest, action)
-                }
-            }
-        }
     }
 }

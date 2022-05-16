@@ -1,6 +1,7 @@
 package ue
 
 import environment.EnvironmentParameters
+import policy.Action
 
 data class UserEquipmentConfig(
     val stateConfig: UserEquipmentStateConfig,
@@ -51,8 +52,10 @@ data class UserEquipmentComponentsConfig(
 data class OffloadingSystemConfig(
     val userEquipmentConfig: UserEquipmentConfig,
     val environmentParameters: EnvironmentParameters,
-    val pMax: Double
+    val pMax: Double,
+    val allActions: Set<Action>
 ) {
+    val actionCount: Int = allActions.size
     val taskQueueCapacity: Int = userEquipmentConfig.stateConfig.taskQueueCapacity
     val tuNumberOfPackets: Int = userEquipmentConfig.stateConfig.tuNumberOfPackets
     val cpuNumberOfSections: Int = userEquipmentConfig.stateConfig.cpuNumberOfSections

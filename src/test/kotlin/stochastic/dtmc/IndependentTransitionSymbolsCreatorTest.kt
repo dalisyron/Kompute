@@ -22,13 +22,11 @@ class IndependentTransitionCalculatorTest {
     fun testcase1() {
         val transitionCalculator = IndependentTransitionCalculator(sampleStateConfig1)
 
-        transitionCalculator.calculate()
-
-        val fraction = transitionCalculator.itSymbols[IndexIT(
+        val fraction = transitionCalculator.getIndependentTransitionFraction(
             UserEquipmentState(2, 0, 0),
             UserEquipmentState(1, 1, 0),
             Action.AddToTransmissionUnit
-        )]!!
+        )
 
         assertThat(fraction.top)
             .isNotNull()
