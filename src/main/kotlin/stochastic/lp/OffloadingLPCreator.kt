@@ -215,18 +215,16 @@ class OffloadingLPCreator(
 
     private fun getCoefficientsForEquation4(): Map<UserEquipmentState, Map<Index, Double>> {
         val cEquation4: MutableMap<UserEquipmentState, MutableMap<Index, Double>> = mutableMapOf()
-        config.stateConfig.allStates().forEach { source ->
-            cEquation4[source] = mutableMapOf()
-            config.stateConfig.allStates().forEach { dest ->
+        config.stateConfig.allStates().forEach { dest ->
+            cEquation4[dest] = mutableMapOf()
+            config.stateConfig.allStates().forEach { source ->
                 config.allActions.forEach { action ->
-                    val independentTransitionValue: Double =
-                        itCalculator.getIndependentTransitionFraction(source, dest, action)
-                            .resolveByMapping(symbolMapping)
-
+                    val fraction = itCalculator.getIndependentTransitionFraction(source, dest, action)
+                    val independentTransitionValue: Double = fraction.resolveByMapping(symbolMapping)
                     if (source == dest) {
-                        cEquation4[source]!![Index(dest, action)] = independentTransitionValue - 1
+                        cEquation4[dest]!![Index(source, action)] = independentTransitionValue - 1
                     } else {
-                        cEquation4[source]!![Index(dest, action)] = independentTransitionValue
+                        cEquation4[dest]!![Index(source, action)] = independentTransitionValue
                     }
                 }
             }

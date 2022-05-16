@@ -16,7 +16,15 @@ data class IndexIT(
 data class SymbolFraction(
     val top: List<List<Symbol>>?,
     val bottom: List<List<Symbol>>?
-)
+) {
+    override fun toString(): String {
+        if (top == null || bottom == null) {
+            return "NullFraction"
+        }
+
+        return "$top / $bottom"
+    }
+}
 
 // Calculates the following:
 // X(s1, s2, k)
