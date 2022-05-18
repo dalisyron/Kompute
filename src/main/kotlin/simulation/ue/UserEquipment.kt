@@ -1,5 +1,6 @@
 package simulation.ue
 
+import core.policy.UserEquipmentExecutionState
 import dtmc.UserEquipmentStateManager
 import simulation.logger.Event
 import simulation.logger.Logger
@@ -16,6 +17,7 @@ class UserEquipment(
 ) {
     private val stateManager = UserEquipmentStateManager(config.stateConfig)
 
+
     var state: UserEquipmentState = UserEquipmentState(0, 0, 0)
         set(value) {
             value.validate()
@@ -29,12 +31,29 @@ class UserEquipment(
     var lastUsedId: Int = 0
     var droppedTasks: Int = 0
     var isCpuActive = false
+    var timeSlot: Int = 0
+    var consumedPower: Double = 0.0
 
     fun tick(action: Action) {
         executeAction(action)
+        timeSlot += 1
+    }
+
+    fun getUserEquipmentExecutionState(): UserEquipmentExecutionState {
+        return UserEquipmentExecutionState(
+            ueState = state,
+            timeSlot = timeSlot,
+            totalConsumedPower = consumedPower
+        )
+    }
+
+    private fun getAverageConsumedPower(): Double {
+        return consumedPower / timeSlot
     }
 
     private fun executeAction(action: Action) {
+        if (getAverageConsumedPower() > config.componentsConfig.pMax * (1 + 1/Math.E)) return // Exceeding UE's power limits (System not responding)
+
         isCpuActive = state.cpuState > 0
 
         // 1. Apply action
@@ -75,8 +94,8 @@ class UserEquipment(
             val id = arrivedTaskCount
             logger?.log(Event.TaskArrival(id, timingInfoProvider.getCurrentTimeslot()))
         } catch (e: UserEquipmentStateManager.TaskQueueFullException) {
-            System.err.println("Warning! Max queue capacity was reached. Dropping task.")
-            logger?.log(Event.TaskDropped(-1, timingInfoProvider.getCurrentTimeslot()))
+            // System.err.println("Warning! Max queue capacity was reached. Dropping task.")
+            // logger?.log(Event.TaskDropped(-1, timingInfoProvider.getCurrentTimeslot()))
             droppedTasks += 1
         }
     }
@@ -87,9 +106,11 @@ class UserEquipment(
         }
         if (state.cpuState == -1) {
             state = state.copy(cpuState = 1)
+            consumedPower += config.pLoc
             return
         }
 
+        consumedPower += config.pLoc
         state = stateManager.advanceCPUNextState(state)
         if (state.cpuState == 0) {
             logger?.log(Event.TaskProcessedByCPU(cpuTaskId, timingInfoProvider.getCurrentTimeslot()))
@@ -99,6 +120,7 @@ class UserEquipment(
 
     private fun advanceTU() {
         state = stateManager.advanceTUNextState(state)
+        consumedPower += config.pTx
 
         if (state.tuState == 0) {
             logger?.log(Event.TaskTransmittedByTU(tuTaskId, timingInfoProvider.getCurrentTimeslot()))
@@ -137,6 +159,8 @@ class UserEquipment(
         tuTaskId = -1
         arrivedTaskCount = 0
         lastUsedId = 0
+        consumedPower = 0.0
+        timeSlot = 0
     }
 
 }

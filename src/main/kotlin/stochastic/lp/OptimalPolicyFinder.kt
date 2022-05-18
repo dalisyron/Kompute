@@ -3,7 +3,9 @@ package stochastic.lp
 import ue.OffloadingSystemConfig
 import ue.UserEquipmentState
 
-data class StochasticPolicy(
+data class StochasticPolicyConfig(
+    val eta: Double,
+    val averageDelay: Double,
     val decisionProbabilities: Map<Index, Double>
 )
 
@@ -11,16 +13,16 @@ class OptimalPolicyFinder(
     val config: OffloadingSystemConfig
 ) {
 
-    fun findOptimalPolicy(precision: Int): StochasticPolicy {
+    fun findOptimalPolicy(precision: Int): StochasticPolicyConfig {
         val optimalSolution = findOptimalSolution(precision)
         val variableCount =
             (config.taskQueueCapacity + 1) * (config.tuNumberOfPackets + 1) * (config.cpuNumberOfSections) * config.actionCount
-        check(variableCount == optimalSolution.variableValues.size)
+        check(variableCount == optimalSolution.decisionProbabilities.size)
 
         val stateProbabilities = mutableMapOf<UserEquipmentState, Double>()
 
         val stateActionProbabilities =
-            optimalSolution.variableValues.mapIndexed { index, d -> stateActionIndex(index) to d }.toMap()
+            optimalSolution.decisionProbabilities.mapIndexed { index, d -> stateActionIndex(index) to d }.toMap()
 
         stateActionProbabilities.forEach { (key: Index, value: Double) ->
             if (stateProbabilities.containsKey(key.state)) {
@@ -34,8 +36,10 @@ class OptimalPolicyFinder(
             value / stateProbabilities[key.state]!!
         }
 
-        return StochasticPolicy(
-            decisionProbabilities = decisions
+        return StochasticPolicyConfig(
+            decisionProbabilities = decisions,
+            eta = optimalSolution.eta,
+            averageDelay = optimalSolution.averageDelay
         )
     }
 
@@ -58,8 +62,15 @@ class OptimalPolicyFinder(
         )
     }
 
-    private fun findOptimalSolution(precision: Int): LPSolution {
+    data class LPOffloadingSolution(
+        val eta: Double,
+        val averageDelay: Double,
+        val decisionProbabilities: List<Double>
+    )
+
+    private fun findOptimalSolution(precision: Int): LPOffloadingSolution {
         var optimalSolution: LPSolution? = null
+        var minEta: Double = 0.0
 
         for (i in 0..precision) {
             println("cycle $i of $precision")
@@ -80,9 +91,14 @@ class OptimalPolicyFinder(
 
             if (optimalSolution == null || solution.objectiveValue < optimalSolution.objectiveValue) {
                 optimalSolution = solution
+                minEta = eta
             }
         }
 
-        return optimalSolution!!
+        return LPOffloadingSolution(
+            eta = minEta,
+            averageDelay = optimalSolution!!.objectiveValue,
+            decisionProbabilities =  optimalSolution.variableValues
+        )
     }
 }

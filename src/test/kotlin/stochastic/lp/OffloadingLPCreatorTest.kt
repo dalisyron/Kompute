@@ -28,7 +28,8 @@ class OffloadingLPCreatorTest {
                 eta = 0.2,
                 pTx = 1.0,
                 pLoc = 0.8,
-                nLocal = 17
+                nLocal = 17,
+                pMax = 200.0
             )
         )
         val systemCofig = OffloadingSystemConfig(
@@ -39,8 +40,7 @@ class OffloadingLPCreatorTest {
                 Action.AddToCPU,
                 Action.AddToTransmissionUnit,
                 Action.AddToBothUnits
-            ),
-            pMax = 200.0
+            )
         )
 
         return systemCofig
@@ -236,6 +236,9 @@ class OffloadingLPCreatorTest {
 
         assertThat(lp.rows[1].coefficients)
             .hasSize(48)
+
+        assertThat(lp.rows[1].type)
+            .isEqualTo(EquationRow.Type.LessThan)
 
         coefficients.forEachIndexed { index, d ->
             // println("${stateActionByIndex[index]} | Actual: ${lp.rows[1].coefficients[index]} | Expected: ${coefficients[index]}")

@@ -46,13 +46,13 @@ data class UserEquipmentComponentsConfig(
     val eta: Double,
     val pTx: Double,
     val pLoc: Double,
-    val nLocal: Int
+    val nLocal: Int,
+    val pMax: Double
 )
 
 data class OffloadingSystemConfig(
     val userEquipmentConfig: UserEquipmentConfig,
     val environmentParameters: EnvironmentParameters,
-    val pMax: Double,
     val allActions: Set<Action>
 ) {
     val actionCount: Int = allActions.size
@@ -67,6 +67,7 @@ data class OffloadingSystemConfig(
     val nLocal: Int = userEquipmentConfig.componentsConfig.nLocal
     val nCloud: Int = environmentParameters.nCloud
     val tRx: Double = environmentParameters.tRx
+    val pMax: Double = userEquipmentConfig.componentsConfig.pMax
 
     val stateConfig = userEquipmentConfig.stateConfig
 }

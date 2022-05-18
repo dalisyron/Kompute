@@ -1,9 +1,13 @@
-package policy
+package core.policy
 
-import ue.UserEquipmentState
+import policy.Action
+import ue.OffloadingSystemConfig
 
-object LocalOnlyPolicy : Policy {
-    override fun getActionForState(state: UserEquipmentState): Action {
+class LocalOnlyPolicy(
+    val systemConfig: OffloadingSystemConfig
+) : Policy {
+
+    override fun getActionForState(state: UserEquipmentExecutionState): Action {
         if (state.cpuState == 0 && state.taskQueueLength > 0) {
             return Action.AddToCPU
         } else {
@@ -12,8 +16,10 @@ object LocalOnlyPolicy : Policy {
     }
 }
 
-object TransmitOnlyPolicy : Policy {
-    override fun getActionForState(state: UserEquipmentState): Action {
+class TransmitOnlyPolicy(
+    val systemConfig: OffloadingSystemConfig
+) : Policy {
+    override fun getActionForState(state: UserEquipmentExecutionState): Action {
         if (state.tuState == 0 && state.taskQueueLength > 0) {
             return Action.AddToTransmissionUnit
         } else {
@@ -22,9 +28,11 @@ object TransmitOnlyPolicy : Policy {
     }
 }
 
-object GreedyLocalFirstPolicy : Policy {
+class GreedyLocalFirstPolicy(
+    val systemConfig: OffloadingSystemConfig
+) : Policy {
 
-    override fun getActionForState(state: UserEquipmentState): Action {
+    override fun getActionForState(state: UserEquipmentExecutionState): Action {
         val canRunLocally = state.cpuState == 0
         val canTransmit = state.tuState == 0
 
@@ -40,9 +48,11 @@ object GreedyLocalFirstPolicy : Policy {
     }
 }
 
-object GreedyOffloadFirstPolicy : Policy {
+class GreedyOffloadFirstPolicy(
+    val systemConfig: OffloadingSystemConfig
+) : Policy {
 
-    override fun getActionForState(state: UserEquipmentState): Action {
+    override fun getActionForState(state: UserEquipmentExecutionState): Action {
         val canRunLocally = state.cpuState == 0
         val canTransmit = state.tuState == 0
 
@@ -56,21 +66,4 @@ object GreedyOffloadFirstPolicy : Policy {
 
         return Action.NoOperation
     }
-}
-
-object LocalFirstPolicy : Policy {
-
-    override fun getActionForState(state: UserEquipmentState): Action {
-        val canRunLocally = state.cpuState == 0
-        val canTransmit = state.tuState == 0
-
-        if (canRunLocally && state.taskQueueLength > 0) {
-            return Action.AddToCPU
-        } else if (canTransmit && state.taskQueueLength > 0) {
-            return Action.AddToTransmissionUnit
-        }
-
-        return Action.NoOperation
-    }
-
 }

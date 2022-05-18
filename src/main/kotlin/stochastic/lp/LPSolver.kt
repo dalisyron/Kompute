@@ -67,7 +67,7 @@ object LPSolver {
                     constraintIndex++
                 }
                 EquationRow.Type.LessThan -> {
-                    val constraint = solver.makeConstraint(0.0, infinity, "c$constraintIndex")
+                    val constraint = solver.makeConstraint(Double.NEGATIVE_INFINITY, it.rhs, "c$constraintIndex")
                     for (i in 0 until variableCount) {
                         constraint.setCoefficient(variables[i], it.coefficients[i])
                     }

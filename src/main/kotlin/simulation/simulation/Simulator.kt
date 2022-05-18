@@ -2,7 +2,7 @@ package simulation.simulation
 
 import environment.EnvironmentParameters
 import simulation.logger.Logger
-import policy.Policy
+import core.policy.Policy
 import simulation.ue.UserEquipment
 import ue.UserEquipmentConfig
 import ue.UserEquipmentTimingInfoProvider
@@ -24,7 +24,7 @@ class Simulator(
 
         var lastPercent: Double = 0.0
         runFor(numberOfTimeSlots) {
-            val action = policy.getActionForState(userEquipment.state)
+            val action = policy.getActionForState(userEquipment.getUserEquipmentExecutionState())
             userEquipment.tick(action)
             val progress = clock.toDouble() / numberOfTimeSlots.toDouble()
         }
