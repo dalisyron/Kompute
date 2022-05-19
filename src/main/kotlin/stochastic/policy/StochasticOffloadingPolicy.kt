@@ -29,6 +29,7 @@ class StochasticOffloadingPolicy(
             val cumulativeProbabilities = distribution.map { it.second }.scan(0.0) { acc, d -> acc + d }
             // println("Cumulative probabilities = $cumulativeProbabilities")
             val rand = Random.nextDouble()
+            check(rand > 0)
 
             for (i in 0 until cumulativeProbabilities.size - 1) {
                 if (rand > cumulativeProbabilities[i] && rand <= cumulativeProbabilities[i + 1]) {
@@ -36,7 +37,7 @@ class StochasticOffloadingPolicy(
                 }
             }
 
-            throw IllegalStateException()
+            throw IllegalStateException("rand = $rand | cumulative =$cumulativeProbabilities | distribution = $distribution")
         }
     }
 }

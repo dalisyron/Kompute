@@ -9,6 +9,7 @@ import simulation.simulation.Simulator
 import stochastic.lp.OptimalPolicyFinder
 import stochastic.policy.StochasticOffloadingPolicy
 import ue.OffloadingSystemConfig
+import ue.OffloadingSystemConfig.Companion.withEta
 import ue.UserEquipmentComponentsConfig
 import ue.UserEquipmentConfig
 import ue.UserEquipmentStateConfig
@@ -22,7 +23,7 @@ class StochasticPolicyTest {
         )
         val userEquipmentConfig = UserEquipmentConfig(
             stateConfig = UserEquipmentStateConfig(
-                taskQueueCapacity = 15, // set to some big number,
+                taskQueueCapacity = 30, // set to some big number,
                 tuNumberOfPackets = 1,
                 cpuNumberOfSections = 17
             ),
@@ -54,21 +55,36 @@ class StochasticPolicyTest {
     fun testPolicyAverageBetterThanGreedyOffloadFirst() {
         val simpleConfig = getSimpleConfig()
         val optimalPolicyFinder = OptimalPolicyFinder(simpleConfig)
-        val stochConfig = optimalPolicyFinder.findOptimalPolicy(100) // 25 was 7.53 // 100 was 7.92 // 25 was 7.50 // 100 was 7.95
+        val stochasticPolicy = optimalPolicyFinder.findOptimalPolicy(100) // 25 was 7.53 // 100 was 7.92 // 25 was 7.50 // 100 was 7.95
 
-        val stochasticPolicy = StochasticOffloadingPolicy(stochConfig, simpleConfig)
-        val greedyOffloadFirstPolicy = GreedyOffloadFirstPolicy(simpleConfig)
+        val greedyOffloadFirstPolicy = GreedyOffloadFirstPolicy
 
-        val simulator = Simulator(
-            environmentParameters = simpleConfig.environmentParameters,
-            userEquipmentConfig = simpleConfig.userEquipmentConfig
-        )
+        val simulator = Simulator(simpleConfig)
         val averageDelayStochastic = simulator.simulatePolicy(stochasticPolicy, 2000_000).averageDelay
         val averageDelayGof = simulator.simulatePolicy(greedyOffloadFirstPolicy, 2000_000).averageDelay
 
-        println("Average delay for stochastic = $averageDelayStochastic | Average delay for greedy = $averageDelayGof")
+        println("Average delay for stochastic = $averageDelayStochastic with eta=${stochasticPolicy.stochasticPolicyConfig.eta} | Average delay for greedy = $averageDelayGof")
 
         assertThat(averageDelayStochastic)
             .isLessThan(averageDelayGof)
+    }
+
+    @Test
+    fun testCompareSimulationWithLPForEta() {
+        val etas = (1..40).map { it * 2.0 / 100.0}
+
+        etas.forEach {
+            val baseConfig = getSimpleConfig()
+            val config = baseConfig.withEta(it)
+            val optimalPolicyFinder = OptimalPolicyFinder(config)
+            val stochConfig = optimalPolicyFinder.getOptimalWithEta(it)
+            val stochasticPolicy = StochasticOffloadingPolicy(stochConfig, config)
+            val averageDelayEstimate = stochConfig.averageDelay
+            val simulator = Simulator(config)
+
+            val averageDelayStochastic = simulator.simulatePolicy(stochasticPolicy, 2000_000).averageDelay
+
+            println("For eta = $it | Stochastic delay estimate = $averageDelayEstimate | Simulation delay = $averageDelayStochastic")
+        }
     }
 }

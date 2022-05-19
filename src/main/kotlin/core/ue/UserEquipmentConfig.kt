@@ -70,4 +70,26 @@ data class OffloadingSystemConfig(
     val pMax: Double = userEquipmentConfig.componentsConfig.pMax
 
     val stateConfig = userEquipmentConfig.stateConfig
+
+    companion object {
+        fun OffloadingSystemConfig.withAlpha(alpha: Double): OffloadingSystemConfig {
+            return this.copy(
+                userEquipmentConfig = userEquipmentConfig.copy(
+                    componentsConfig = userEquipmentConfig.componentsConfig.copy(
+                        alpha = alpha
+                    )
+                )
+            )
+        }
+
+        fun OffloadingSystemConfig.withEta(eta: Double): OffloadingSystemConfig {
+            return this.copy(
+                userEquipmentConfig = userEquipmentConfig.copy(
+                    componentsConfig = userEquipmentConfig.componentsConfig.copy(
+                        eta = eta
+                    )
+                )
+            )
+        }
+    }
 }

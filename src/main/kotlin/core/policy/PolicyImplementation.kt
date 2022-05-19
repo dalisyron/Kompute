@@ -3,9 +3,7 @@ package core.policy
 import policy.Action
 import ue.OffloadingSystemConfig
 
-class LocalOnlyPolicy(
-    val systemConfig: OffloadingSystemConfig
-) : Policy {
+object LocalOnlyPolicy : Policy {
 
     override fun getActionForState(state: UserEquipmentExecutionState): Action {
         if (state.cpuState == 0 && state.taskQueueLength > 0) {
@@ -16,9 +14,8 @@ class LocalOnlyPolicy(
     }
 }
 
-class TransmitOnlyPolicy(
-    val systemConfig: OffloadingSystemConfig
-) : Policy {
+object TransmitOnlyPolicy : Policy {
+
     override fun getActionForState(state: UserEquipmentExecutionState): Action {
         if (state.tuState == 0 && state.taskQueueLength > 0) {
             return Action.AddToTransmissionUnit
@@ -28,9 +25,7 @@ class TransmitOnlyPolicy(
     }
 }
 
-class GreedyLocalFirstPolicy(
-    val systemConfig: OffloadingSystemConfig
-) : Policy {
+object GreedyLocalFirstPolicy : Policy {
 
     override fun getActionForState(state: UserEquipmentExecutionState): Action {
         val canRunLocally = state.cpuState == 0
@@ -48,9 +43,7 @@ class GreedyLocalFirstPolicy(
     }
 }
 
-class GreedyOffloadFirstPolicy(
-    val systemConfig: OffloadingSystemConfig
-) : Policy {
+object GreedyOffloadFirstPolicy : Policy {
 
     override fun getActionForState(state: UserEquipmentExecutionState): Action {
         val canRunLocally = state.cpuState == 0

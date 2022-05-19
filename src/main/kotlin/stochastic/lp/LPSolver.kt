@@ -52,7 +52,7 @@ object LPSolver {
             when (it.type) {
                 EquationRow.Type.Objective -> {
                     val objective = solver.objective()
-                    objective.setOffset(it.rhs)
+                    objective.setOffset(-it.rhs)
                     objective.setMinimization()
 
                     for (i in 0 until variableCount) {

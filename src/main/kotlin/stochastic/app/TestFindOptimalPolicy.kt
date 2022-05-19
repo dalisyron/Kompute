@@ -5,6 +5,7 @@ import policy.Action
 import stochastic.lp.Index
 import stochastic.lp.OptimalPolicyFinder
 import stochastic.lp.StochasticPolicyConfig
+import stochastic.policy.StochasticOffloadingPolicy
 import ue.OffloadingSystemConfig
 import ue.UserEquipmentComponentsConfig
 import ue.UserEquipmentConfig
@@ -53,11 +54,11 @@ fun main() {
 
     val optimalPolicyFinder = OptimalPolicyFinder(systemCofig)
 
-    val policyW2: StochasticPolicyConfig = optimalPolicyFinder.findOptimalPolicy(30)
+    val policyW2: StochasticOffloadingPolicy = optimalPolicyFinder.findOptimalPolicy(30)
     val policyW1 = OptimalPolicyFinder(systemConfig2).findOptimalPolicy(30)
 
-    policyW1.decisionProbabilities.forEach { (index: Index, probability: Double) ->
-        val pW2 = policyW2.decisionProbabilities[index]!!
+    policyW1.stochasticPolicyConfig.decisionProbabilities.forEach { (index: Index, probability: Double) ->
+        val pW2 = policyW2.stochasticPolicyConfig.decisionProbabilities[index]!!
         if (abs(pW2 - probability) > 1e-4)  {
             println("Mismatch: State = ${index.state} | Action = ${index.action} | 1W Decision: $probability | 2W Decision: $pW2")
         }
