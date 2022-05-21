@@ -1,7 +1,7 @@
 package dtmc
 
 import ue.UserEquipmentState
-import ue.UserEquipmentStateConfig
+import core.ue.UserEquipmentStateConfig
 
 class UserEquipmentStateManager(private val config: UserEquipmentStateConfig) {
 

@@ -8,7 +8,7 @@ import dtmc.symbol.Symbol
 import org.junit.jupiter.api.Test
 import policy.Action
 import ue.UserEquipmentState
-import ue.UserEquipmentStateConfig
+import core.ue.UserEquipmentStateConfig
 
 internal class DTMCCreatorTests {
     private val sampleStateConfig1 = UserEquipmentStateConfig(

@@ -5,22 +5,61 @@ import core.policy.Policy
 import core.policy.UserEquipmentExecutionState
 import stochastic.lp.Index
 import stochastic.lp.StochasticPolicyConfig
-import ue.OffloadingSystemConfig
+import core.ue.OffloadingSystemConfig
+import core.ue.UserEquipmentStateConfig.Companion.allStates
+import stochastic.dtmc.DTMCCreator
 import java.lang.IllegalStateException
+import kotlin.math.abs
 import kotlin.random.Random
 
-class StochasticOffloadingPolicy(
+data class StochasticOffloadingPolicy(
     val stochasticPolicyConfig: StochasticPolicyConfig,
     val systemConfig: OffloadingSystemConfig
 ) : Policy {
 
     override fun getActionForState(state: UserEquipmentExecutionState): Action {
-        val actions = systemConfig.allActions
         val actionProbabilities: List<Pair<Action, Double>> = systemConfig.allActions.map {
             it to stochasticPolicyConfig.decisionProbabilities[Index(state.ueState, it)]!!
         }
 
         return getActionFromProbabilityDistribution(actionProbabilities)
+    }
+
+    fun validate() {
+        systemConfig.stateConfig.allStates().forEach { state ->
+            var probabilitySum = 0.0
+            systemConfig.allActions.forEach { action ->
+                val actionProbability = stochasticPolicyConfig.decisionProbabilities[Index(state, action)]!!
+                if (!DTMCCreator.getPossibleActions(state).contains(action)) {
+                    check(actionProbability < 1e-9) {
+                        println("Policy violates possible actions condition: state = $state | action = $action | probability = $actionProbability")
+                    }
+                }
+                probabilitySum += actionProbability
+            }
+            check(abs(probabilitySum - 1.0) < 1e-6) {
+                println("<<Error Start:")
+                println("Policy has invalid probability distribution: state = $state | probabilitySum = $probabilitySum")
+                systemConfig.allActions.forEach { action ->
+                    val prob = stochasticPolicyConfig.decisionProbabilities[Index(state, action)]
+                    println("Probability for $action = $prob")
+                }
+                println("Error End>>")
+
+            }
+        }
+    }
+
+    override fun toString(): String {
+        val lines = mutableListOf<String>()
+        lines.add("===============")
+        lines.add("POLICY : ")
+        lines.add("eta = ${stochasticPolicyConfig.eta}")
+        stochasticPolicyConfig.decisionProbabilities.forEach { (key: Index, value: Double) ->
+            lines.add("$key : $value")
+        }
+        lines.add("=============+=")
+        return lines.joinToString(separator = "\n")
     }
 
     companion object {

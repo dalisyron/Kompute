@@ -1,7 +1,6 @@
 package core.policy
 
 import policy.Action
-import ue.OffloadingSystemConfig
 
 object LocalOnlyPolicy : Policy {
 

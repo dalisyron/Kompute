@@ -1,7 +1,9 @@
-package ue
+package core.ue
 
-import environment.EnvironmentParameters
+import core.environment.EnvironmentParameters
 import policy.Action
+import ue.UserEquipmentState
+import kotlin.math.pow
 
 data class UserEquipmentConfig(
     val stateConfig: UserEquipmentStateConfig,
@@ -15,7 +17,6 @@ data class UserEquipmentConfig(
     val eta: Double = componentsConfig.eta
     val pTx: Double = componentsConfig.pTx
     val pLoc: Double = componentsConfig.pLoc
-    val nLocal: Int = componentsConfig.nLocal
 }
 
 data class UserEquipmentStateConfig(
@@ -46,7 +47,6 @@ data class UserEquipmentComponentsConfig(
     val eta: Double,
     val pTx: Double,
     val pLoc: Double,
-    val nLocal: Int,
     val pMax: Double
 )
 
@@ -64,10 +64,22 @@ data class OffloadingSystemConfig(
     val eta: Double = userEquipmentConfig.componentsConfig.eta
     val pTx: Double = userEquipmentConfig.componentsConfig.pTx
     val pLoc: Double = userEquipmentConfig.componentsConfig.pLoc
-    val nLocal: Int = userEquipmentConfig.componentsConfig.nLocal
     val nCloud: Int = environmentParameters.nCloud
-    val tRx: Double = environmentParameters.tRx
+    val tRx: Int = environmentParameters.tRx
     val pMax: Double = userEquipmentConfig.componentsConfig.pMax
+    val tTx: Double by lazy {
+        var expectedSingleDelay = 0.0
+        val beta = beta
+        val numberOfPackets = tuNumberOfPackets
+        for (j in 1..1000) { // in theory, infinity is used instead of 1000. But 1000 is precise enough for practice
+            expectedSingleDelay += j * (1.0 - beta).pow(j - 1) * beta
+        }
+        return@lazy numberOfPackets * expectedSingleDelay
+    }
+
+    fun expectedTCloud(): Double {
+        return tRx + nCloud + tTx
+    }
 
     val stateConfig = userEquipmentConfig.stateConfig
 
@@ -82,6 +94,16 @@ data class OffloadingSystemConfig(
             )
         }
 
+        fun OffloadingSystemConfig.withBeta(beta: Double): OffloadingSystemConfig {
+            return this.copy(
+                userEquipmentConfig = userEquipmentConfig.copy(
+                    componentsConfig = userEquipmentConfig.componentsConfig.copy(
+                        beta = beta
+                    )
+                )
+            )
+        }
+
         fun OffloadingSystemConfig.withEta(eta: Double): OffloadingSystemConfig {
             return this.copy(
                 userEquipmentConfig = userEquipmentConfig.copy(
@@ -91,5 +113,36 @@ data class OffloadingSystemConfig(
                 )
             )
         }
+
+        fun OffloadingSystemConfig.withTaskQueueCapacity(capacity: Int): OffloadingSystemConfig {
+            return this.copy(
+                userEquipmentConfig = userEquipmentConfig.copy(
+                    stateConfig = userEquipmentConfig.stateConfig.copy(
+                        taskQueueCapacity = capacity
+                    )
+                )
+            )
+        }
+
+        fun OffloadingSystemConfig.withNumberOfSections(cpuNumberOfSections: Int): OffloadingSystemConfig {
+            return this.copy(
+                userEquipmentConfig = userEquipmentConfig.copy(
+                    stateConfig = userEquipmentConfig.stateConfig.copy(
+                        cpuNumberOfSections = cpuNumberOfSections
+                    )
+                )
+            )
+        }
+
+        fun OffloadingSystemConfig.withPMax(pMax: Double): OffloadingSystemConfig {
+            return this.copy(
+                userEquipmentConfig = userEquipmentConfig.copy(
+                    componentsConfig = userEquipmentConfig.componentsConfig.copy(
+                        pMax = pMax
+                    )
+                )
+            )
+        }
+
     }
 }

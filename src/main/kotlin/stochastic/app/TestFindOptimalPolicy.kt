@@ -1,21 +1,20 @@
 package stochastic.app
 
-import environment.EnvironmentParameters
+import core.environment.EnvironmentParameters
 import policy.Action
 import stochastic.lp.Index
 import stochastic.lp.OptimalPolicyFinder
-import stochastic.lp.StochasticPolicyConfig
 import stochastic.policy.StochasticOffloadingPolicy
-import ue.OffloadingSystemConfig
-import ue.UserEquipmentComponentsConfig
-import ue.UserEquipmentConfig
-import ue.UserEquipmentStateConfig
+import core.ue.OffloadingSystemConfig
+import core.ue.UserEquipmentComponentsConfig
+import core.ue.UserEquipmentConfig
+import core.ue.UserEquipmentStateConfig
 import kotlin.math.abs
 
 fun main() {
     val environmentParameters = EnvironmentParameters(
         nCloud = 1,
-        tRx = 0.0,
+        tRx = 0,
     )
     val userEquipmentConfig = UserEquipmentConfig(
         stateConfig = UserEquipmentStateConfig(
@@ -29,7 +28,6 @@ fun main() {
             eta = 0.2,
             pTx = 1.0,
             pLoc = 0.8,
-            nLocal = 17,
             pMax = 2.0
         )
     )

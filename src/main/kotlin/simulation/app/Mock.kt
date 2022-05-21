@@ -1,33 +1,32 @@
 package simulation.app
 
-import environment.EnvironmentParameters
+import core.environment.EnvironmentParameters
 import policy.Action
-import ue.OffloadingSystemConfig
-import ue.UserEquipmentComponentsConfig
-import ue.UserEquipmentConfig
-import ue.UserEquipmentStateConfig
+import core.ue.OffloadingSystemConfig
+import core.ue.UserEquipmentComponentsConfig
+import core.ue.UserEquipmentConfig
+import core.ue.UserEquipmentStateConfig
 
 object Mock {
 
     fun configFromLiyu(): OffloadingSystemConfig {
         val environmentParameters = EnvironmentParameters(
             nCloud = 1,
-            tRx = 0.0,
+            tRx = 0,
         )
         val userEquipmentConfig = UserEquipmentConfig(
             stateConfig = UserEquipmentStateConfig(
-                taskQueueCapacity = 12, // set to some big number,
+                taskQueueCapacity = 13, // set to some big number,
                 tuNumberOfPackets = 1,
-                cpuNumberOfSections = 17
+                cpuNumberOfSections = 14
             ),
             componentsConfig = UserEquipmentComponentsConfig(
                 alpha = 0.4,
                 beta = 0.4,
                 eta = 0.0, // Not used in the baseline policies, set to whatever
-                pTx = 1.5,
-                pLoc = 1.5,
-                nLocal = 17,
-                pMax = 1000.1
+                pTx = 1.4,
+                pLoc = 0.3,
+                pMax = 1.6
             )
         )
 

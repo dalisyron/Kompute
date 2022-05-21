@@ -5,7 +5,7 @@ import dtmc.UserEquipmentStateManager
 import simulation.logger.Event
 import simulation.logger.Logger
 import policy.Action
-import ue.UserEquipmentConfig
+import core.ue.UserEquipmentConfig
 import ue.UserEquipmentState
 import ue.UserEquipmentState.Companion.validate
 import ue.UserEquipmentTimingInfoProvider
@@ -36,6 +36,7 @@ class UserEquipment(
 
     fun tick(action: Action) {
         executeAction(action)
+        // println("state = $state")
         timeSlot += 1
     }
 
@@ -52,7 +53,7 @@ class UserEquipment(
     }
 
     private fun executeAction(action: Action) {
-        if (getAverageConsumedPower() > config.componentsConfig.pMax * (1 + 1/Math.E)) return // Exceeding UE's power limits (System not responding)
+        if (getAverageConsumedPower() > config.componentsConfig.pMax) return // Exceeding UE's power limits (System not responding)
 
         isCpuActive = state.cpuState > 0
 
@@ -113,7 +114,7 @@ class UserEquipment(
         consumedPower += config.pLoc
         state = stateManager.advanceCPUNextState(state)
         if (state.cpuState == 0) {
-            logger?.log(Event.TaskProcessedByCPU(cpuTaskId, timingInfoProvider.getCurrentTimeslot()))
+            logger?.log(Event.TaskProcessedByCPU(cpuTaskId, timingInfoProvider.getCurrentTimeslot() + 1))
             cpuTaskId = -1
         }
     }
@@ -123,7 +124,7 @@ class UserEquipment(
         consumedPower += config.pTx
 
         if (state.tuState == 0) {
-            logger?.log(Event.TaskTransmittedByTU(tuTaskId, timingInfoProvider.getCurrentTimeslot()))
+            logger?.log(Event.TaskTransmittedByTU(tuTaskId, timingInfoProvider.getCurrentTimeslot() + 1))
             tuTaskId = -1
         }
     }

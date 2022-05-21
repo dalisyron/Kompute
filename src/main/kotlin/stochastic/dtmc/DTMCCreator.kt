@@ -8,8 +8,8 @@ import stochastic.dtmc.transition.Edge
 import stochastic.dtmc.transition.Transition
 import stochastic.dtmc.transition.toEdge
 import ue.UserEquipmentState
-import ue.UserEquipmentStateConfig
-import ue.UserEquipmentStateConfig.Companion.allStates
+import core.ue.UserEquipmentStateConfig
+import core.ue.UserEquipmentStateConfig.Companion.allStates
 
 data class DiscreteTimeMarkovChain(
     val stateConfig: UserEquipmentStateConfig,

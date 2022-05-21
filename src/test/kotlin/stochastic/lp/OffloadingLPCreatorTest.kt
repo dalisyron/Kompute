@@ -1,20 +1,22 @@
 package stochastic.lp
 
 import com.google.common.truth.Truth.assertThat
-import environment.EnvironmentParameters
-import org.junit.jupiter.api.Assertions.*
+import core.environment.EnvironmentParameters
+import core.ue.OffloadingSystemConfig
+import core.ue.UserEquipmentComponentsConfig
+import core.ue.UserEquipmentConfig
+import core.ue.UserEquipmentStateConfig
 import org.junit.jupiter.api.Test
 import policy.Action
 import ue.*
-import ue.UserEquipmentStateConfig.Companion.allStates
-import kotlin.math.abs
+import core.ue.UserEquipmentStateConfig.Companion.allStates
 
 class OffloadingLPCreatorTest {
 
     fun getSimpleConfig(): OffloadingSystemConfig {
         val environmentParameters = EnvironmentParameters(
             nCloud = 1,
-            tRx = 0.0,
+            tRx = 0,
         )
         val userEquipmentConfig = UserEquipmentConfig(
             stateConfig = UserEquipmentStateConfig(
@@ -23,12 +25,11 @@ class OffloadingLPCreatorTest {
                 cpuNumberOfSections = 2
             ),
             componentsConfig = UserEquipmentComponentsConfig(
-                alpha = 0.40,
+                alpha = 0.30,
                 beta = 0.4,
                 eta = 0.2,
                 pTx = 1.0,
                 pLoc = 0.8,
-                nLocal = 17,
                 pMax = 200.0
             )
         )
@@ -50,7 +51,7 @@ class OffloadingLPCreatorTest {
     fun testObjectiveCoefficientsSimple1() {
         val systemCofig = getSimpleConfig()
 
-        val creator = OffloadingLPCreator(config = systemCofig)
+        val creator = OffloadingLPCreator(systemConfig = systemCofig)
 
         val lp = creator.createLP() as StandardLinearProgram
 
@@ -492,7 +493,7 @@ class OffloadingLPCreatorTest {
         /*
                    State Action Table:
 
-                   var id      | state         | action
+                   var id      | source state  | action
                    ---------------------------------------------
                    0           | (0, 0, 0)     | NoOperation                | TZ
                    1           | (0, 0, 0)     | AddToCPU                   | TZ
@@ -552,6 +553,228 @@ class OffloadingLPCreatorTest {
         expectedCoefficients[39] = -1.0
 
         val stateActionByIndex = getStateActionByIndex(simpleConfig)
+        eqCoefficients.forEachIndexed { i, d ->
+            println("${stateActionByIndex[i]} : $d")
+        }
+        eqCoefficients.forEachIndexed { i, d ->
+            println("$i : ${stateActionByIndex[i]} | Actual: ${eqCoefficients[i]} | Expected: ${expectedCoefficients[i]}")
+            assertThat(d)
+                .isWithin(1e-6)
+                .of(expectedCoefficients[i])
+        }
+    }
+
+    @Test
+    fun testCoefficientsEquation4T2() {
+        val simpleConfig = getSimpleConfig() // (2, 1, 2)
+        val creator = OffloadingLPCreator(simpleConfig)
+        val lp = creator.createLP() as StandardLinearProgram
+        val numberOfEquations = simpleConfig.stateConfig.allStates().size
+
+        val equations = lp.rows.subList(3, 3 + numberOfEquations)
+
+        val index = 10 // UserEquipmentState(2, 1, 0)
+        /*
+            State Table
+
+            State               | Index
+            ========================================
+             (0, 0, 0)          | 0
+             (0, 0, 1)          | 1
+             (0, 1, 0)          | 2
+             (0, 1, 1)          | 3
+             (1, 0, 0)          | 4
+             (1, 0, 1)          | 5
+             (1, 1, 0)          | 6
+             (1, 1, 1)          | 7
+             (2, 0, 0)          | 8
+             (2, 0, 1)          | 9
+             (2, 1, 0)          | 10
+             (2, 1, 1)          | 11
+         */
+
+        val eqCoefficients = equations[index].coefficients
+
+        /*
+                   State Action Table:
+
+                   var id      | source state  | action
+                   ---------------------------------------------
+                   0           | (0, 0, 0)     | NoOperation                | TZ
+                   1           | (0, 0, 0)     | AddToCPU                   | TZ
+                   2           | (0, 0, 0)     | AddToTransmissionUnit      | TZ
+                   3           | (0, 0, 0)     | AddToBothUnits             | TZ
+                   4           | (0, 0, 1)     | NoOperation                | TZ
+                   5           | (0, 0, 1)     | AddToCPU                   | TZ
+                   6           | (0, 0, 1)     | AddToTransmissionUnit      | TZ
+                   7           | (0, 0, 1)     | AddToBothUnits             | TZ
+                   8           | (0, 1, 0)     | NoOperation                | TZ
+                   9           | (0, 1, 0)     | AddToCPU                   | TZ
+                   10          | (0, 1, 0)     | AddToTransmissionUnit      | TZ
+                   11          | (0, 1, 0)     | AddToBothUnits             | TZ
+                   12          | (0, 1, 1)     | NoOperation                | TZ
+                   13          | (0, 1, 1)     | AddToCPU                   | TZ
+                   14          | (0, 1, 1)     | AddToTransmissionUnit      | TZ
+                   15          | (0, 1, 1)     | AddToBothUnits             | TZ
+                   16          | (1, 0, 0)     | NoOperation                | TZ
+                   17          | (1, 0, 0)     | AddToCPU                   | TZ
+                   18          | (1, 0, 0)     | AddToTransmissionUnit      | TZ
+                   19          | (1, 0, 0)     | AddToBothUnits             | TZ
+                   20          | (1, 0, 1)     | NoOperation                | TZ
+                   21          | (1, 0, 1)     | AddToCPU                   | TZ
+                   22          | (1, 0, 1)     | AddToTransmissionUnit      | TZ
+                   23          | (1, 0, 1)     | AddToBothUnits             | TZ
+                   24          | (1, 1, 0)     | NoOperation                | Alpha * BetaC
+                   25          | (1, 1, 0)     | AddToCPU                   | TZ
+                   26          | (1, 1, 0)     | AddToTransmissionUnit      | TZ
+                   27          | (1, 1, 0)     | AddToBothUnits             | TZ
+                   28          | (1, 1, 1)     | NoOperation                | TZ
+                   29          | (1, 1, 1)     | AddToCPU                   | TZ
+                   30          | (1, 1, 1)     | AddToTransmissionUnit      | TZ
+                   31          | (1, 1, 1)     | AddToBothUnits             | TZ
+                   32          | (2, 0, 0)     | NoOperation                | TZ
+                   33          | (2, 0, 0)     | AddToCPU                   | TZ
+                   34          | (2, 0, 0)     | AddToTransmissionUnit      | Alpha * BetaC
+                   35          | (2, 0, 0)     | AddToBothUnits             | TZ
+                   36          | (2, 0, 1)     | NoOperation                | TZ
+                   37          | (2, 0, 1)     | AddToCPU                   | TZ
+                   38          | (2, 0, 1)     | AddToTransmissionUnit      | Alpha * BetaC
+                   39          | (2, 0, 1)     | AddToBothUnits             | TZ
+                   40          | (2, 1, 0)     | NoOperation                | BetaC
+                   41          | (2, 1, 0)     | AddToCPU                   | TZ
+                   42          | (2, 1, 0)     | AddToTransmissionUnit      | TZ
+                   43          | (2, 1, 0)     | AddToBothUnits             | TZ
+                   44          | (2, 1, 1)     | NoOperation                | BetaC
+                   45          | (2, 1, 1)     | AddToCPU                   | TZ
+                   46          | (2, 1, 1)     | AddToTransmissionUnit      | TZ
+                   47          | (2, 1, 1)     | AddToBothUnits             | TZ
+                */
+        val expectedCoefficients: MutableList<Double> = (1..48).map { 0.0 }.toMutableList()
+        expectedCoefficients[24] = simpleConfig.alpha * (1.0 - simpleConfig.beta)
+        expectedCoefficients[28] = simpleConfig.alpha * (1.0 - simpleConfig.beta)
+        expectedCoefficients[34] = (1.0 - simpleConfig.beta) * simpleConfig.alpha
+        expectedCoefficients[38] = (1.0 - simpleConfig.beta) * simpleConfig.alpha
+        expectedCoefficients[40] = (1.0 - simpleConfig.beta)
+        expectedCoefficients[44] = (1.0 - simpleConfig.beta)
+        expectedCoefficients[40] -= 1.0
+        expectedCoefficients[41] -= 1.0
+        expectedCoefficients[42] -= 1.0
+        expectedCoefficients[43] -= 1.0
+
+        val stateActionByIndex = getStateActionByIndex(simpleConfig)
+        eqCoefficients.forEachIndexed { i, d ->
+            println("${stateActionByIndex[i]} : $d")
+        }
+        eqCoefficients.forEachIndexed { i, d ->
+            println("$i : ${stateActionByIndex[i]} | Actual: ${eqCoefficients[i]} | Expected: ${expectedCoefficients[i]}")
+            assertThat(d)
+                .isWithin(1e-6)
+                .of(expectedCoefficients[i])
+        }
+    }
+
+    @Test
+    fun testCoefficientsEquation4T3() {
+        val config = getSimpleConfig() // (2, 1, 2)
+        val creator = OffloadingLPCreator(config)
+        val lp = creator.createLP() as StandardLinearProgram
+        val numberOfEquations = config.stateConfig.allStates().size
+
+        val equations = lp.rows.subList(3, 3 + numberOfEquations)
+
+        val index = 8 // UserEquipmentState(2, 0, 0)
+        /*
+            State Table
+
+            State               | Index
+            ========================================
+             (0, 0, 0)          | 0
+             (0, 0, 1)          | 1
+             (0, 1, 0)          | 2
+             (0, 1, 1)          | 3
+             (1, 0, 0)          | 4
+             (1, 0, 1)          | 5
+             (1, 1, 0)          | 6
+             (1, 1, 1)          | 7
+             (2, 0, 0)          | 8
+             (2, 0, 1)          | 9
+             (2, 1, 0)          | 10
+             (2, 1, 1)          | 11
+         */
+
+        val eqCoefficients = equations[index].coefficients
+
+        /*
+                   State Action Table:
+
+                   var id      | source state  | action
+                   ---------------------------------------------
+                   0           | (0, 0, 0)     | NoOperation                | TZ
+                   1           | (0, 0, 0)     | AddToCPU                   | TZ
+                   2           | (0, 0, 0)     | AddToTransmissionUnit      | TZ
+                   3           | (0, 0, 0)     | AddToBothUnits             | TZ
+                   4           | (0, 0, 1)     | NoOperation                | TZ
+                   5           | (0, 0, 1)     | AddToCPU                   | TZ
+                   6           | (0, 0, 1)     | AddToTransmissionUnit      | TZ
+                   7           | (0, 0, 1)     | AddToBothUnits             | TZ
+                   8           | (0, 1, 0)     | NoOperation                | TZ
+                   9           | (0, 1, 0)     | AddToCPU                   | TZ
+                   10          | (0, 1, 0)     | AddToTransmissionUnit      | TZ
+                   11          | (0, 1, 0)     | AddToBothUnits             | TZ
+                   12          | (0, 1, 1)     | NoOperation                | TZ
+                   13          | (0, 1, 1)     | AddToCPU                   | TZ
+                   14          | (0, 1, 1)     | AddToTransmissionUnit      | TZ
+                   15          | (0, 1, 1)     | AddToBothUnits             | TZ
+                   16          | (1, 0, 0)     | NoOperation                | Alpha
+                   17          | (1, 0, 0)     | AddToCPU                   | TZ
+                   18          | (1, 0, 0)     | AddToTransmissionUnit      | TZ
+                   19          | (1, 0, 0)     | AddToBothUnits             | TZ
+                   20          | (1, 0, 1)     | NoOperation                | Alpha
+                   21          | (1, 0, 1)     | AddToCPU                   | TZ
+                   22          | (1, 0, 1)     | AddToTransmissionUnit      | TZ
+                   23          | (1, 0, 1)     | AddToBothUnits             | TZ
+                   24          | (1, 1, 0)     | NoOperation                | Alpha * Beta
+                   25          | (1, 1, 0)     | AddToCPU                   | TZ
+                   26          | (1, 1, 0)     | AddToTransmissionUnit      | TZ
+                   27          | (1, 1, 0)     | AddToBothUnits             | TZ
+                   28          | (1, 1, 1)     | NoOperation                | Alpha * Beta
+                   29          | (1, 1, 1)     | AddToCPU                   | TZ
+                   30          | (1, 1, 1)     | AddToTransmissionUnit      | TZ
+                   31          | (1, 1, 1)     | AddToBothUnits             | TZ
+                   32          | (2, 0, 0)     | NoOperation                | 1.0
+                   33          | (2, 0, 0)     | AddToCPU                   | TZ
+                   34          | (2, 0, 0)     | AddToTransmissionUnit      | Beta * Alpha
+                   35          | (2, 0, 0)     | AddToBothUnits             | TZ
+                   36          | (2, 0, 1)     | NoOperation                | TZ
+                   37          | (2, 0, 1)     | AddToCPU                   | TZ
+                   38          | (2, 0, 1)     | AddToTransmissionUnit      | Beta * Alpha
+                   39          | (2, 0, 1)     | AddToBothUnits             | TZ
+                   40          | (2, 1, 0)     | NoOperation                | Beta
+                   41          | (2, 1, 0)     | AddToCPU                   | TZ
+                   42          | (2, 1, 0)     | AddToTransmissionUnit      | TZ
+                   43          | (2, 1, 0)     | AddToBothUnits             | TZ
+                   44          | (2, 1, 1)     | NoOperation                | Beta
+                   45          | (2, 1, 1)     | AddToCPU                   | TZ
+                   46          | (2, 1, 1)     | AddToTransmissionUnit      | TZ
+                   47          | (2, 1, 1)     | AddToBothUnits             | TZ
+                */
+        val expectedCoefficients: MutableList<Double> = (1..48).map { 0.0 }.toMutableList()
+        expectedCoefficients[16] = config.alpha
+        expectedCoefficients[20] = config.alpha
+        expectedCoefficients[24] = config.alpha * config.beta
+        expectedCoefficients[28] = config.alpha * config.beta
+        expectedCoefficients[32] = 1.0
+        expectedCoefficients[34] = config.beta * config.alpha
+        expectedCoefficients[36] = 1.0
+        expectedCoefficients[38] = config.beta * config.alpha
+        expectedCoefficients[40] = config.beta
+        expectedCoefficients[44] = config.beta
+        expectedCoefficients[32] -= 1.0
+        expectedCoefficients[33] -= 1.0
+        expectedCoefficients[34] -= 1.0
+        expectedCoefficients[35] -= 1.0
+
+        val stateActionByIndex = getStateActionByIndex(config)
         eqCoefficients.forEachIndexed { i, d ->
             println("${stateActionByIndex[i]} : $d")
         }

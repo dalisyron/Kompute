@@ -7,7 +7,7 @@ import stochastic.lp.resolveByMapping
 import org.junit.jupiter.api.Test
 import policy.Action
 import ue.UserEquipmentState
-import ue.UserEquipmentStateConfig
+import core.ue.UserEquipmentStateConfig
 import kotlin.math.abs
 
 class IndependentTransitionCalculatorTest {

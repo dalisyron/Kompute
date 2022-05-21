@@ -1,8 +1,10 @@
 package stochastic.lp
 
 import com.google.ortools.Loader
+import com.google.ortools.glop.GlopParameters
 import com.google.ortools.linearsolver.MPConstraint
 import com.google.ortools.linearsolver.MPSolver
+import java.lang.IllegalArgumentException
 
 fun MPSolver.makeEqualityConstraint(rhs: Double, name: String): MPConstraint {
     return makeConstraint(rhs, rhs, name)
@@ -19,9 +21,8 @@ object LPSolver {
         Loader.loadNativeLibraries()
     }
 
-    fun solve(lp: StandardLinearProgram): LPSolution {
-        check(lp.rows.map { it.coefficients.size }
-            .toSet().size == 1) // Check there is an equal number of variables for each row
+    fun solve(lp: StandardLinearProgram, defaultTolerance: Boolean = true): LPSolution {
+        check(lp.rows.map { it.coefficients.size }.toSet().size == 1) // Check there is an equal number of variables for each row
 
         val objectiveCount = lp.rows.filter { it.type == EquationRow.Type.Objective }.size
         check(objectiveCount == 1) {
@@ -36,6 +37,10 @@ object LPSolver {
         val variableCount = lp.rows[0].coefficients.size
 
         val solver = MPSolver.createSolver("GLOP")
+        if (!defaultTolerance) {
+            solver.setSolverSpecificParametersAsString(GlopParameters.newBuilder().setSolutionFeasibilityTolerance(1e-4).build().toString())
+        }
+
 
         checkNotNull(solver) {
             "Could not create solver SCIP"
@@ -78,8 +83,13 @@ object LPSolver {
 
         val resultStatus = solver.solve()
 
-        check(resultStatus == MPSolver.ResultStatus.OPTIMAL) {
-            "The problem does not have an optimal solution."
+        if (resultStatus != MPSolver.ResultStatus.OPTIMAL && defaultTolerance) {
+            println("Log: Result status was $resultStatus. Retrying with relaxed tolerance...")
+            return solve(lp, defaultTolerance = false)
+        }
+
+        if (resultStatus != MPSolver.ResultStatus.OPTIMAL) {
+            throw IllegalArgumentException("The given LP does not have an optimal solution | status = $resultStatus")
         }
 
         return LPSolution(

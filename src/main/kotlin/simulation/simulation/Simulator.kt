@@ -3,14 +3,14 @@ package simulation.simulation
 import simulation.logger.Logger
 import core.policy.Policy
 import simulation.ue.UserEquipment
-import ue.OffloadingSystemConfig
+import core.ue.OffloadingSystemConfig
 import ue.UserEquipmentTimingInfoProvider
 
 class Simulator(
     systemConfig: OffloadingSystemConfig
 ) : UserEquipmentTimingInfoProvider {
     private val userEquipment: UserEquipment = UserEquipment(this, systemConfig.userEquipmentConfig)
-    private val simulationReportCreator: SimulationReportCreator = SimulationReportCreator(systemConfig.environmentParameters)
+    private val simulationReportCreator: SimulationReportCreator = SimulationReportCreator(systemConfig)
     private var clock: Int = 0
     private val logger = Logger()
 

@@ -4,19 +4,21 @@ import dtmc.symbol.ParameterSymbol
 import dtmc.symbol.Symbol
 import policy.Action
 import stochastic.dtmc.DTMCCreator
-import stochastic.dtmc.DiscreteTimeMarkovChain
 import stochastic.dtmc.IndependentTransitionCalculator
 import stochastic.dtmc.SymbolFraction
-import ue.OffloadingSystemConfig
+import core.ue.OffloadingSystemConfig
 import ue.UserEquipmentState
-import ue.UserEquipmentStateConfig.Companion.allStates
-import kotlin.math.pow
-import kotlin.system.exitProcess
+import core.ue.UserEquipmentStateConfig.Companion.allStates
 
 data class Index(
     val state: UserEquipmentState,
     val action: Action
-)
+) {
+
+    override fun toString(): String {
+        return "($state | $action)"
+    }
+}
 
 data class OffloadingLinearProgram(
     val cObjective: Map<Index, Double>,
@@ -108,56 +110,45 @@ data class OffloadingLinearProgram(
 }
 
 class OffloadingLPCreator(
-    val config: OffloadingSystemConfig
+    val systemConfig: OffloadingSystemConfig
 ) {
     private val symbolMapping: Map<Symbol, Double> = run {
         mapOf(
-            ParameterSymbol.Beta to config.beta,
-            ParameterSymbol.BetaC to 1.0 - config.beta,
-            ParameterSymbol.Alpha to config.alpha,
-            ParameterSymbol.AlphaC to 1.0 - config.alpha
+            ParameterSymbol.Beta to systemConfig.beta,
+            ParameterSymbol.BetaC to 1.0 - systemConfig.beta,
+            ParameterSymbol.Alpha to systemConfig.alpha,
+            ParameterSymbol.AlphaC to 1.0 - systemConfig.alpha
         )
     }
-    val itCalculator = IndependentTransitionCalculator(config.stateConfig)
-    val tTx: Double by lazy {
-        var expectedSingleDelay = 0.0
-        val beta = config.beta
-        val numberOfPackets = config.tuNumberOfPackets
-        for (j in 1..1000) { // in theory, infinity is used instead of 1000. But 1000 is precise enough for practice
-            expectedSingleDelay += j * (1.0 - beta).pow(j - 1) * beta
-        }
-        return@lazy numberOfPackets * expectedSingleDelay
-    }
-    val tCloud: Double by lazy {
-        val tRx = config.tRx
-        val nCloud = config.nCloud
-        return@lazy tRx + tTx + nCloud
-    }
+    val itCalculator = IndependentTransitionCalculator(systemConfig.stateConfig)
 
     private fun getCoefficientsForObjective(): Map<Index, Double> {
         val cObjective: MutableMap<Index, Double> = mutableMapOf()
-        config.stateConfig.allStates().forEach { state ->
-            config.allActions.forEach { action ->
-                cObjective[Index(state, action)] =
-                    state.taskQueueLength / config.alpha
+        systemConfig.stateConfig.allStates().forEach { state ->
+            systemConfig.allActions.forEach { action ->
+                cObjective[Index(state, action)] = state.taskQueueLength / systemConfig.alpha
             }
         }
         return cObjective
     }
 
+    private fun expectedTaskTime(): Double {
+        val eta: Double = systemConfig.eta
+        val numberOfSections: Int = systemConfig.cpuNumberOfSections
+        return (eta * numberOfSections + (1 - eta) * systemConfig.expectedTCloud())
+    }
+
     private fun rhsObjective(): Double {
-        val eta: Double = config.eta
-        val nLocal: Int = config.nLocal
-        return -(eta * nLocal + (1 - eta) * tCloud)
+        return -expectedTaskTime()
     }
 
     private fun getCoefficientsForEquation2(): Map<Index, Double> {
         val cEquation2: MutableMap<Index, Double> = mutableMapOf()
-        val pLoc = config.pLoc
-        val pTx = config.pTx
-        val beta = config.beta
-        config.stateConfig.allStates().forEach { state ->
-            config.allActions.map { action ->
+        val pLoc = systemConfig.pLoc
+        val pTx = systemConfig.pTx
+        val beta = systemConfig.beta
+        systemConfig.stateConfig.allStates().forEach { state ->
+            systemConfig.allActions.map { action ->
                 val index = Index(state, action)
                 cEquation2[index] = 0.0
                 val isActionPossible = DTMCCreator.getPossibleActions(state).contains(action)
@@ -185,21 +176,21 @@ class OffloadingLPCreator(
 
     private fun getCoefficientsForEquation3(): Map<Index, Double> {
         val cEquation3: MutableMap<Index, Double> = mutableMapOf()
-        config.stateConfig.allStates().forEach { state ->
-            config.allActions.forEach { action ->
+        systemConfig.stateConfig.allStates().forEach { state ->
+            systemConfig.allActions.forEach { action ->
                 val index = Index(state, action)
                 val possibleActions = DTMCCreator.getPossibleActions(state)
 
                 if (possibleActions.contains(action)) {
                     cEquation3[index] = when (action) {
                         Action.AddToCPU -> {
-                             (1.0 - config.eta)
+                            (1.0 - systemConfig.eta)
                         }
                         Action.AddToBothUnits -> {
-                            (1.0 - 2 * config.eta)
+                            (1.0 - 2 * systemConfig.eta)
                         }
                         Action.AddToTransmissionUnit -> {
-                            (-config.eta)
+                            (-systemConfig.eta)
                         }
                         Action.NoOperation -> {
                             0.0
@@ -215,10 +206,10 @@ class OffloadingLPCreator(
 
     private fun getCoefficientsForEquation4(): Map<UserEquipmentState, Map<Index, Double>> {
         val cEquation4: MutableMap<UserEquipmentState, MutableMap<Index, Double>> = mutableMapOf()
-        config.stateConfig.allStates().forEach { dest ->
+        systemConfig.stateConfig.allStates().forEach { dest ->
             cEquation4[dest] = mutableMapOf()
-            config.stateConfig.allStates().forEach { source ->
-                config.allActions.forEach { action ->
+            systemConfig.stateConfig.allStates().forEach { source ->
+                systemConfig.allActions.forEach { action ->
                     val fraction = itCalculator.getIndependentTransitionFraction(source, dest, action)
                     val independentTransitionValue: Double = fraction.resolveByMapping(symbolMapping)
                     if (source == dest) {
@@ -234,8 +225,8 @@ class OffloadingLPCreator(
 
     private fun getCoefficientsForEquation5(): Map<Index, Double> {
         val cEquation5: MutableMap<Index, Double> = mutableMapOf()
-        config.stateConfig.allStates().forEach { state ->
-            config.allActions.forEach { action ->
+        systemConfig.stateConfig.allStates().forEach { state ->
+            systemConfig.allActions.forEach { action ->
                 val index = Index(state, action)
                 cEquation5[index] = 1.0
             }
@@ -250,7 +241,7 @@ class OffloadingLPCreator(
         val cEquation4 = getCoefficientsForEquation4()
         val cEquation5 = getCoefficientsForEquation5()
         val rhsObjective: Double = rhsObjective()
-        val rhsEquation2: Double = config.pMax
+        val rhsEquation2: Double = systemConfig.pMax
         val rhsEquation3: Double = 0.0
         val rhsEquation4: Double = 0.0
         val rhsEquation5 = 1.0
@@ -266,7 +257,26 @@ class OffloadingLPCreator(
             rhsEquation4 = rhsEquation4,
             cEquation5 = cEquation5,
             rhsEquation5 = rhsEquation5,
-            config = config
+            config = systemConfig
+        )
+    }
+
+    private fun stateActionIndex(index: Int): Index {
+        val r1 = (systemConfig.tuNumberOfPackets + 1) * (systemConfig.cpuNumberOfSections) * systemConfig.actionCount
+        val taskQueueLength = index / r1
+        val r2 = (systemConfig.cpuNumberOfSections) * systemConfig.actionCount
+        val tuState = (index % r1) / r2
+        val r3 = systemConfig.actionCount
+        val cpuState = ((index % r1) % r2) / systemConfig.actionCount
+        val action = systemConfig.allActions.find { it.order == ((index % r1) % r2) % r3 }!!
+
+        return Index(
+            state = UserEquipmentState(
+                taskQueueLength = taskQueueLength,
+                tuState = tuState,
+                cpuState = cpuState
+            ),
+            action = action
         )
     }
 }

@@ -1,7 +1,7 @@
 import com.google.common.truth.Truth.assertThat
 import org.junit.jupiter.api.Test
-import ue.UserEquipmentStateConfig
-import ue.UserEquipmentStateConfig.Companion.allStates
+import core.ue.UserEquipmentStateConfig
+import core.ue.UserEquipmentStateConfig.Companion.allStates
 
 class StateConfigTest {
     private val sampleStateConfig1 = UserEquipmentStateConfig(

@@ -5,13 +5,13 @@ import core.policy.*
 import simulation.simulation.Simulator
 import stochastic.lp.OptimalPolicyFinder
 import stochastic.policy.StochasticOffloadingPolicy
-import ue.OffloadingSystemConfig.Companion.withAlpha
-import java.math.RoundingMode
+import core.ue.OffloadingSystemConfig.Companion.withAlpha
 
 fun main() {
-    val alphas: List<Double> = (1..100).map { it / 100.0 }
+    val alphas: List<Double> = (1..50).map { (it * 1.0) / 100.0 }
 
     val stochasticPolicies: List<StochasticOffloadingPolicy> = alphas.map { alpha ->
+        println("Calculating for alpha = $alpha")
         val systemConfig = Mock.configFromLiyu().withAlpha(alpha)
         val optimalPolicyFinder = OptimalPolicyFinder(systemConfig)
         optimalPolicyFinder.findOptimalPolicy(100)
@@ -30,7 +30,11 @@ fun main() {
         val systemConfig = Mock.configFromLiyu().withAlpha(alpha)
         val simulator = Simulator(systemConfig)
         val testPolicies = listOf(
-            LocalOnlyPolicy, TransmitOnlyPolicy, GreedyOffloadFirstPolicy, GreedyLocalFirstPolicy, stochasticPolicies[i]
+            LocalOnlyPolicy,
+            TransmitOnlyPolicy,
+            GreedyOffloadFirstPolicy,
+            GreedyLocalFirstPolicy,
+            stochasticPolicies[i]
         )
         val delays = testPolicies.map {
             simulator.simulatePolicy(it, simulationTicks).averageDelay
@@ -45,6 +49,10 @@ fun main() {
     }
 
     val plot = Plot.create()
+    println("localOnly = $localOnlyDelays")
+    stochasticPolicies.forEach {
+        println(it)
+    }
     plot.plot().add(alphas, localOnlyDelays).color("red").label("Local Only")
     plot.plot().add(alphas, transmitOnlyDelays).color("blue").label("Offload Only")
     plot.plot().add(alphas, greedyOffloadFirstDelays).color("green").label("Greedy (Offload First)")
@@ -54,8 +62,8 @@ fun main() {
     plot.xlabel("The average arrival rate (alpha)")
     plot.ylabel("The average delay")
     plot.title("Average delay for policies")
-    plot.ylim(0, 50)
-    plot.xlim(0, 0.6)
+    plot.ylim(0, 60)
+    plot.xlim(0, 1.0)
     plot.legend()
     plot.show()
 }

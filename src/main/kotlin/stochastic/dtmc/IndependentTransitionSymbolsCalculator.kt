@@ -2,10 +2,8 @@ package stochastic.dtmc
 
 import dtmc.symbol.Symbol
 import policy.Action
-import ue.OffloadingSystemConfig
 import ue.UserEquipmentState
-import ue.UserEquipmentStateConfig
-import ue.UserEquipmentStateConfig.Companion.allStates
+import core.ue.UserEquipmentStateConfig
 
 data class IndexIT(
     val source: UserEquipmentState,

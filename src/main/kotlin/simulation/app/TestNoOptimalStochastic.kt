@@ -2,7 +2,7 @@ package simulation.app
 
 import simulation.simulation.Simulator
 import stochastic.lp.OptimalPolicyFinder
-import ue.OffloadingSystemConfig.Companion.withAlpha
+import core.ue.OffloadingSystemConfig.Companion.withAlpha
 
 fun main() {
     val alpha = 0.26
