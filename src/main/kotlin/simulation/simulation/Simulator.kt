@@ -5,6 +5,7 @@ import core.policy.Policy
 import simulation.ue.UserEquipment
 import core.ue.OffloadingSystemConfig
 import ue.UserEquipmentTimingInfoProvider
+import kotlin.system.exitProcess
 
 class Simulator(
     systemConfig: OffloadingSystemConfig
@@ -23,7 +24,12 @@ class Simulator(
         var lastPercent: Double = 0.0
         runFor(numberOfTimeSlots) {
             val action = policy.getActionForState(userEquipment.getUserEquipmentExecutionState())
-            userEquipment.tick(action)
+            val oldState = userEquipment.state
+            try {
+                userEquipment.tick(action)
+            } catch (e: Exception) {
+                exitProcess(1)
+            }
             val progress = clock.toDouble() / numberOfTimeSlots.toDouble()
         }
 

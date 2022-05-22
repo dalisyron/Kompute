@@ -15,6 +15,25 @@ data class SymbolFraction(
     val top: List<List<Symbol>>?,
     val bottom: List<List<Symbol>>?
 ) {
+
+    fun resolveByMapping(symbolMapping: Map<Symbol, Double>): Double {
+        if (top == null || bottom == null) {
+            return 0.0
+        }
+        if (top.size == 1 && bottom.size == 1 && top[0].isEmpty() && bottom[0].isEmpty()) { // Going from (Q, 0, 0) to (Q, 0, 0) with No Operation
+            return 1.0
+        }
+        check(top.all { it.isNotEmpty() })
+        check(bottom.all { it.isNotEmpty() })
+
+        return top.map { resolveListByMapping(it, symbolMapping) }.reduce { acc, d -> acc + d } /
+                bottom.map { resolveListByMapping(it, symbolMapping) }.reduce { acc, d -> acc + d }
+    }
+
+    private fun resolveListByMapping(list: List<Symbol>, symbolMapping: Map<Symbol, Double>): Double {
+        return list.map { symbolMapping[it]!! }.reduce { acc, d -> acc * d }
+    }
+
     override fun toString(): String {
         if (top == null || bottom == null) {
             return "NullFraction"

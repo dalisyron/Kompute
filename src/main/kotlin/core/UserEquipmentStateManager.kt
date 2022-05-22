@@ -2,8 +2,9 @@ package dtmc
 
 import ue.UserEquipmentState
 import core.ue.UserEquipmentStateConfig
+import policy.Action
 
-class UserEquipmentStateManager(private val config: UserEquipmentStateConfig) {
+class UserEquipmentStateManager(private val config: UserEquipmentStateConfig) : PossibleActionProvider {
 
     fun addTaskNextState(state: UserEquipmentState): UserEquipmentState {
         // TODO test this
@@ -66,5 +67,32 @@ class UserEquipmentStateManager(private val config: UserEquipmentStateConfig) {
         }
     }
 
+    override fun getPossibleActions(state: UserEquipmentState): List<Action> {
+        val (taskQueueLength, tuState, cpuState) = state
+
+        val res = mutableListOf<Action>(Action.NoOperation)
+
+        if (taskQueueLength >= 1) {
+            if (tuState == 0) {
+                res.add(Action.AddToTransmissionUnit)
+            }
+            if (cpuState == 0) {
+                res.add(Action.AddToCPU)
+            }
+        }
+
+        if (taskQueueLength >= 2) {
+            if (tuState == 0 && cpuState == 0)
+                res.add(Action.AddToBothUnits)
+        }
+
+        return res
+    }
+
     class TaskQueueFullException : IllegalStateException()
 }
+
+interface PossibleActionProvider {
+    fun getPossibleActions(state: UserEquipmentState): List<Action>
+}
+

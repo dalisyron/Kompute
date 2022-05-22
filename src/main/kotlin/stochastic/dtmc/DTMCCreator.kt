@@ -10,6 +10,7 @@ import stochastic.dtmc.transition.toEdge
 import ue.UserEquipmentState
 import core.ue.UserEquipmentStateConfig
 import core.ue.UserEquipmentStateConfig.Companion.allStates
+import dtmc.PossibleActionProvider
 
 data class DiscreteTimeMarkovChain(
     val stateConfig: UserEquipmentStateConfig,
@@ -18,9 +19,9 @@ data class DiscreteTimeMarkovChain(
 )
 
 class DTMCCreator(
-    private val stateConfig: UserEquipmentStateConfig
-) {
+    private val stateConfig: UserEquipmentStateConfig,
     private val stateManager: UserEquipmentStateManager = UserEquipmentStateManager(stateConfig)
+) : PossibleActionProvider by stateManager {
 
     fun create(): DiscreteTimeMarkovChain {
         val adjacencyList: Map<UserEquipmentState, List<Edge>> =
@@ -119,30 +120,6 @@ class DTMCCreator(
             return destinations.map { entry ->
                 Transition(state, entry.first, listOf(entry.second))
             }
-        }
-    }
-
-    companion object {
-        fun getPossibleActions(state: UserEquipmentState): List<Action> {
-            val (taskQueueLength, tuState, cpuState) = state
-
-            val res = mutableListOf<Action>(Action.NoOperation)
-
-            if (taskQueueLength >= 1) {
-                if (tuState == 0) {
-                    res.add(Action.AddToTransmissionUnit)
-                }
-                if (cpuState == 0) {
-                    res.add(Action.AddToCPU)
-                }
-            }
-
-            if (taskQueueLength >= 2) {
-                if (tuState == 0 && cpuState == 0)
-                    res.add(Action.AddToBothUnits)
-            }
-
-            return res
         }
     }
 }

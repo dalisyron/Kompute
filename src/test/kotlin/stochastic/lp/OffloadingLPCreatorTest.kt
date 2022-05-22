@@ -6,7 +6,7 @@ import core.ue.OffloadingSystemConfig
 import core.ue.UserEquipmentComponentsConfig
 import core.ue.UserEquipmentConfig
 import core.ue.UserEquipmentStateConfig
-import org.junit.jupiter.api.Test
+import org.junit.Test
 import policy.Action
 import ue.*
 import core.ue.UserEquipmentStateConfig.Companion.allStates
@@ -53,7 +53,7 @@ class OffloadingLPCreatorTest {
 
         val creator = OffloadingLPCreator(systemConfig = systemCofig)
 
-        val lp = creator.createLP() as StandardLinearProgram
+        val lp = creator.createStandardLinearProgram()
 
         /*
             Variable Index Table:
@@ -127,7 +127,7 @@ class OffloadingLPCreatorTest {
         val systemConfig = getSimpleConfig()
 
         val lpCreator = OffloadingLPCreator(systemConfig)
-        val lp = lpCreator.createLP() as StandardLinearProgram
+        val lp = lpCreator.createStandardLinearProgram()
 
         assertThat(lp.rows)
             .hasSize(4 + systemConfig.stateConfig.allStates().size)
@@ -144,23 +144,23 @@ class OffloadingLPCreatorTest {
         return idx
     }
 
-    fun getStateActionByIndex(systemConfig: OffloadingSystemConfig): Map<Int, Index> {
-        val stateActionByIndex: MutableMap<Int, Index> = mutableMapOf()
+    fun getStateActionByIndex(systemConfig: OffloadingSystemConfig): Map<Int, StateAction> {
+        val stateActionByStateAction: MutableMap<Int, StateAction> = mutableMapOf()
         var idx = 0
         systemConfig.stateConfig.allStates().forEach { state ->
             systemConfig.allActions.forEach { action ->
-                stateActionByIndex[idx] = Index(state, action)
+                stateActionByStateAction[idx] = StateAction(state, action)
                 idx += 1
             }
         }
-        return stateActionByIndex
+        return stateActionByStateAction
     }
     @Test
     fun testCoefficientsEquation2() {
         val systemConfig = getSimpleConfig()
 
         val lpCreator = OffloadingLPCreator(systemConfig)
-        val lp = lpCreator.createLP() as StandardLinearProgram
+        val lp = lpCreator.createStandardLinearProgram()
 
         /*
                    Variable Index Table:
@@ -226,11 +226,11 @@ class OffloadingLPCreatorTest {
             Z0, L0, T0, B0, L0, Z0, B0, Z0, T0, B0, Z0, Z0, B0, Z0, Z0, Z0
         )
 
-        val stateActionByIndex: MutableMap<Int, Index> = mutableMapOf()
+        val stateActionByStateAction: MutableMap<Int, StateAction> = mutableMapOf()
         var idx = 0
         systemConfig.stateConfig.allStates().forEach { state ->
             systemConfig.allActions.forEach { action ->
-                stateActionByIndex[idx] = Index(state, action)
+                stateActionByStateAction[idx] = StateAction(state, action)
                 idx += 1
             }
         }
@@ -263,7 +263,7 @@ class OffloadingLPCreatorTest {
         val config = getSimpleConfig()
 
         val lpCreator = OffloadingLPCreator(config)
-        val lp = lpCreator.createLP() as StandardLinearProgram
+        val lp = lpCreator.createStandardLinearProgram()
 
         assertThat(lp.rows[2].coefficients)
             .hasSize(48)
@@ -389,7 +389,7 @@ class OffloadingLPCreatorTest {
     fun testRhsEquation3() {
         val config = getSimpleConfig()
         val lpCreator = OffloadingLPCreator(config)
-        val lp = lpCreator.createLP() as StandardLinearProgram
+        val lp = lpCreator.createStandardLinearProgram()
 
         assertThat(lp.rows[2].rhs)
             .isWithin(1e-6)
@@ -400,7 +400,7 @@ class OffloadingLPCreatorTest {
         val config = getSimpleConfig()
 
         val creator = OffloadingLPCreator(config)
-        val lp = creator.createLP() as StandardLinearProgram
+        val lp = creator.createStandardLinearProgram()
         return lp
     }
 
@@ -409,7 +409,7 @@ class OffloadingLPCreatorTest {
         val config = getSimpleConfig()
 
         val creator = OffloadingLPCreator(config)
-        val lp = creator.createLP() as StandardLinearProgram
+        val lp = creator.createStandardLinearProgram()
 
         assertThat(lp.rows.last().coefficients)
             .hasSize(48)
@@ -434,23 +434,23 @@ class OffloadingLPCreatorTest {
     fun testCoefficientsEquation4Offloading() {
         val simpleConfig = getSimpleConfig()
         val creator = OffloadingLPCreator(simpleConfig)
-        val lp = creator.createLP()
+        val lp = creator.createOffloadingLinearProgram()
 
-        val expectedCoefficients = mutableMapOf<Index, Double>()
+        val expectedCoefficients = mutableMapOf<StateAction, Double>()
         simpleConfig.stateConfig.allStates().forEach { source ->
             simpleConfig.allActions.forEach { action ->
-                expectedCoefficients[Index(source, action)] = 0.0
+                expectedCoefficients[StateAction(source, action)] = 0.0
             }
         }
         val destState = UserEquipmentState(2, 0, 1)
 
-        expectedCoefficients[Index(UserEquipmentState(2, 1, 0), Action.AddToCPU)] = simpleConfig.beta * simpleConfig.alpha
-        expectedCoefficients[Index(UserEquipmentState(2, 0, 0), Action.AddToCPU)] = simpleConfig.alpha
+        expectedCoefficients[StateAction(UserEquipmentState(2, 1, 0), Action.AddToCPU)] = simpleConfig.beta * simpleConfig.alpha
+        expectedCoefficients[StateAction(UserEquipmentState(2, 0, 0), Action.AddToCPU)] = simpleConfig.alpha
         simpleConfig.allActions.forEach { action ->
-            expectedCoefficients[Index(destState, action)] = expectedCoefficients[Index(destState, action)]!! - 1.0
+            expectedCoefficients[StateAction(destState, action)] = expectedCoefficients[StateAction(destState, action)]!! - 1.0
         }
 
-        lp.cEquation4[destState]!!.forEach { key: Index, value: Double ->
+        lp.cEquation4[destState]!!.forEach { key: StateAction, value: Double ->
             // println("$key : Expected = ${expectedCoefficients[key]} | Actual = $value")
             assertThat(value)
                 .isWithin(1e-6)
@@ -462,7 +462,7 @@ class OffloadingLPCreatorTest {
     fun testCoefficientsEquation4() {
         val simpleConfig = getSimpleConfig() // (2, 1, 2)
         val creator = OffloadingLPCreator(simpleConfig)
-        val lp = creator.createLP() as StandardLinearProgram
+        val lp = creator.createStandardLinearProgram()
         val numberOfEquations = simpleConfig.stateConfig.allStates().size
 
         val equations = lp.rows.subList(3, 3 + numberOfEquations)
@@ -568,7 +568,7 @@ class OffloadingLPCreatorTest {
     fun testCoefficientsEquation4T2() {
         val simpleConfig = getSimpleConfig() // (2, 1, 2)
         val creator = OffloadingLPCreator(simpleConfig)
-        val lp = creator.createLP() as StandardLinearProgram
+        val lp = creator.createStandardLinearProgram()
         val numberOfEquations = simpleConfig.stateConfig.allStates().size
 
         val equations = lp.rows.subList(3, 3 + numberOfEquations)
@@ -677,7 +677,7 @@ class OffloadingLPCreatorTest {
     fun testCoefficientsEquation4T3() {
         val config = getSimpleConfig() // (2, 1, 2)
         val creator = OffloadingLPCreator(config)
-        val lp = creator.createLP() as StandardLinearProgram
+        val lp = creator.createStandardLinearProgram()
         val numberOfEquations = config.stateConfig.allStates().size
 
         val equations = lp.rows.subList(3, 3 + numberOfEquations)

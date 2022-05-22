@@ -2,13 +2,14 @@ package stochastic.app
 
 import core.environment.EnvironmentParameters
 import policy.Action
-import stochastic.lp.Index
+import stochastic.lp.StateAction
 import stochastic.lp.OptimalPolicyFinder
 import stochastic.policy.StochasticOffloadingPolicy
 import core.ue.OffloadingSystemConfig
 import core.ue.UserEquipmentComponentsConfig
 import core.ue.UserEquipmentConfig
 import core.ue.UserEquipmentStateConfig
+import stochastic.lp.RangedOptimalPolicyFinder
 import kotlin.math.abs
 
 fun main() {
@@ -50,15 +51,13 @@ fun main() {
         )
     )
 
-    val optimalPolicyFinder = OptimalPolicyFinder(systemCofig)
+    val policyW2: StochasticOffloadingPolicy = RangedOptimalPolicyFinder.findOptimalPolicy(systemCofig, 30)
+    val policyW1 = RangedOptimalPolicyFinder.findOptimalPolicy(systemConfig2, 30)
 
-    val policyW2: StochasticOffloadingPolicy = optimalPolicyFinder.findOptimalPolicy(30)
-    val policyW1 = OptimalPolicyFinder(systemConfig2).findOptimalPolicy(30)
-
-    policyW1.stochasticPolicyConfig.decisionProbabilities.forEach { (index: Index, probability: Double) ->
-        val pW2 = policyW2.stochasticPolicyConfig.decisionProbabilities[index]!!
+    policyW1.stochasticPolicyConfig.decisionProbabilities.forEach { (stateAction: StateAction, probability: Double) ->
+        val pW2 = policyW2.stochasticPolicyConfig.decisionProbabilities[stateAction]!!
         if (abs(pW2 - probability) > 1e-4)  {
-            println("Mismatch: State = ${index.state} | Action = ${index.action} | 1W Decision: $probability | 2W Decision: $pW2")
+            println("Mismatch: State = ${stateAction.state} | Action = ${stateAction.action} | 1W Decision: $probability | 2W Decision: $pW2")
         }
     }
 

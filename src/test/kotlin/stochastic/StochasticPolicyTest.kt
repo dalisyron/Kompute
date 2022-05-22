@@ -4,12 +4,10 @@ import com.google.common.truth.Truth.assertThat
 import core.policy.GreedyOffloadFirstPolicy
 import core.environment.EnvironmentParameters
 import org.junit.Ignore
-import org.junit.jupiter.api.Test
+import org.junit.Test
 import policy.Action
 import simulation.simulation.Simulator
 import stochastic.lp.OptimalPolicyFinder
-import stochastic.lp.StochasticPolicyConfig
-import stochastic.policy.StochasticOffloadingPolicy
 import core.ue.OffloadingSystemConfig
 import core.ue.OffloadingSystemConfig.Companion.withAlpha
 import core.ue.OffloadingSystemConfig.Companion.withBeta
@@ -20,6 +18,10 @@ import core.ue.OffloadingSystemConfig.Companion.withTaskQueueCapacity
 import core.ue.UserEquipmentComponentsConfig
 import core.ue.UserEquipmentConfig
 import core.ue.UserEquipmentStateConfig
+import org.junit.experimental.categories.Category
+import stochastic.lp.RangedOptimalPolicyFinder
+
+interface SlowTests
 
 class StochasticPolicyTest {
 
@@ -58,12 +60,13 @@ class StochasticPolicyTest {
     }
 
     @Test
-    @Ignore("Time-consuming test. Ignored to improve speed of running the entire test suit.")
+    @Category(SlowTests::class)
     fun testPolicyAverageBetterThanGreedyOffloadFirst() {
-        val simpleConfig = getSimpleConfig()
-        val optimalPolicyFinder = OptimalPolicyFinder(simpleConfig)
-        val stochasticPolicy =
-            optimalPolicyFinder.findOptimalPolicy(50) // 25 was 7.53 // 100 was 7.92 // 25 was 7.50 // 100 was 7.95
+        val simpleConfig = getSimpleConfig().withTaskQueueCapacity(10).withEta(1e-9)
+        val stochasticPolicy = RangedOptimalPolicyFinder.findOptimalPolicy(
+            simpleConfig,
+            50
+        ) // 25 was 7.53 // 100 was 7.92 // 25 was 7.50 // 100 was 7.95
 
         val greedyOffloadFirstPolicy = GreedyOffloadFirstPolicy
 
@@ -78,54 +81,50 @@ class StochasticPolicyTest {
     }
 
     @Test
+    @Category(SlowTests::class)
     fun testCompareSimulationWithLPForEta() {
         val etas = (1..40).map { it * 2.0 / 100.0 }
 
         etas.forEach {
             println("testing for eta = $it")
-            val baseConfig = getSimpleConfig().withTaskQueueCapacity(70)
-            val config = baseConfig.withEta(it)
-            val optimalPolicyFinder = OptimalPolicyFinder(config)
-            val stochConfig: StochasticPolicyConfig = optimalPolicyFinder.findOptimalWithGivenEta(it)
-            val stochasticPolicy = StochasticOffloadingPolicy(stochConfig, config)
-            val averageDelayEstimate = stochConfig.averageDelay
+            val config = getSimpleConfig().withTaskQueueCapacity(100).withEta(it)
+            val optimalPolicy = OptimalPolicyFinder.findOptimalPolicy(config)
+            println("fullQueueProbability = ${optimalPolicy.fullQueueProbability()}")
+
+            val averageDelayEstimate = optimalPolicy.averageDelay
             val simulator = Simulator(config)
 
-            val averageDelaySimulation = simulator.simulatePolicy(stochasticPolicy, 20_000_000).averageDelay
+            val averageDelaySimulation = simulator.simulatePolicy(optimalPolicy, 2_000_000).averageDelay
 
             println("estimate = $averageDelayEstimate | simulation = $averageDelaySimulation")
 
             assertThat(averageDelayEstimate)
-                .isWithin(1e-2)
+                .isWithin(0.2)
                 .of(averageDelaySimulation)
         }
     }
 
     @Test
+    @Category(SlowTests::class)
     fun testCompareSimulationWithEtaAnomaly() {
         // Found in previous test runs
-        val eta = 0.3
-
         assertSimulationEqualsEstimate(
             getSimpleConfig()
-                .withEta(1.0)
+                .withEta(0.6)
                 .withAlpha(0.2)
                 .withBeta(0.6)
-                .withNumberOfSections(17)
-                .withTaskQueueCapacity(50)
+                .withNumberOfSections(3)
+                .withTaskQueueCapacity(100)
                 .withPMax(200.0)
         )
     }
 
-    fun assertSimulationEqualsEstimate(config: OffloadingSystemConfig) {
-        val optimalPolicyFinder = OptimalPolicyFinder(config)
-        val stochConfig: StochasticPolicyConfig = optimalPolicyFinder.findOptimalWithGivenEta(config.eta)
-        val stochasticPolicy = StochasticOffloadingPolicy(stochConfig, config)
-        println("Policy : $stochasticPolicy")
-        val averageDelayEstimate = stochConfig.averageDelay
+    private fun assertSimulationEqualsEstimate(config: OffloadingSystemConfig) {
+        val stochasticPolicy = OptimalPolicyFinder.findOptimalPolicy(config)
+        val averageDelayEstimate = stochasticPolicy.averageDelay
         val simulator = Simulator(config)
 
-        val averageDelaySimulation = simulator.simulatePolicy(stochasticPolicy, 4_000_000).averageDelay
+        val averageDelaySimulation = simulator.simulatePolicy(stochasticPolicy, 20_000_000).averageDelay
 
         println("estimate = $averageDelayEstimate | simulation = $averageDelaySimulation")
 

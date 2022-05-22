@@ -6,6 +6,8 @@ import simulation.simulation.Simulator
 import stochastic.lp.OptimalPolicyFinder
 import stochastic.policy.StochasticOffloadingPolicy
 import core.ue.OffloadingSystemConfig.Companion.withAlpha
+import core.ue.OffloadingSystemConfig.Companion.withEta
+import stochastic.lp.RangedOptimalPolicyFinder
 
 fun main() {
     val alphas: List<Double> = (1..50).map { (it * 1.0) / 100.0 }
@@ -13,8 +15,7 @@ fun main() {
     val stochasticPolicies: List<StochasticOffloadingPolicy> = alphas.map { alpha ->
         println("Calculating for alpha = $alpha")
         val systemConfig = Mock.configFromLiyu().withAlpha(alpha)
-        val optimalPolicyFinder = OptimalPolicyFinder(systemConfig)
-        optimalPolicyFinder.findOptimalPolicy(100)
+        RangedOptimalPolicyFinder.findOptimalPolicy(systemConfig, 100)
     }
 
     var lastPercent = 0.0

@@ -36,7 +36,6 @@ class UserEquipment(
 
     fun tick(action: Action) {
         executeAction(action)
-        // println("state = $state")
         timeSlot += 1
     }
 
@@ -130,7 +129,9 @@ class UserEquipment(
     }
 
     private fun addToTransmissionUnit() {
-        check(tuTaskId == -1)
+        check(tuTaskId == -1) {
+            state
+        }
         tuTaskId = makeNewId()
         state = stateManager.addToTransmissionUnitNextState(state)
 
@@ -138,7 +139,9 @@ class UserEquipment(
     }
 
     private fun addToCPU() {
-        check(cpuTaskId == -1)
+        check(cpuTaskId == -1) {
+            state
+        }
         cpuTaskId = makeNewId()
         state = stateManager.addToCPUNextState(state)
 
