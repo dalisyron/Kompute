@@ -12,6 +12,5 @@ data class EquationRow(
 }
 
 class StandardLinearProgram(
-    val rows: List<EquationRow>,
-    val zeroVariables: Set<Int>
+    val rows: List<EquationRow?>
 )

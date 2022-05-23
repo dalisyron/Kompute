@@ -22,19 +22,20 @@ object LPSolver {
     }
 
     fun solve(lp: StandardLinearProgram, defaultTolerance: Boolean = true): LPSolution {
-        check(lp.rows.map { it.coefficients.size }.toSet().size == 1) // Check there is an equal number of variables for each row
+        val rows = lp.rows.requireNoNulls()
+        check(rows.map { it.coefficients.size }.toSet().size == 1) // Check there is an equal number of variables for each row
 
-        val objectiveCount = lp.rows.filter { it.type == EquationRow.Type.Objective }.size
+        val objectiveCount = rows.filter { it.type == EquationRow.Type.Objective }.size
         check(objectiveCount == 1) {
             "Need exactly one objective function. Found $objectiveCount"
         }
 
-        val constraintCount = lp.rows.size - objectiveCount
+        val constraintCount = rows.size - objectiveCount
         check(constraintCount >= 1) {
             "Need at least one constraint"
         }
 
-        val variableCount = lp.rows[0].coefficients.size
+        val variableCount = rows[0].coefficients.size
 
         val solver = MPSolver.createSolver("GLOP")
         if (!defaultTolerance) {
@@ -48,12 +49,12 @@ object LPSolver {
 
         val infinity = Double.POSITIVE_INFINITY
 
-        val variables = (1..variableCount).map {
-            solver.makeNumVar(0.0, infinity, "x$it")
+        val variables = (1..variableCount).map { index ->
+            solver.makeNumVar(0.0, infinity, "x$index")
         }
 
         var constraintIndex = 1
-        lp.rows.forEach {
+        rows.forEach {
             when (it.type) {
                 EquationRow.Type.Objective -> {
                     val objective = solver.objective()

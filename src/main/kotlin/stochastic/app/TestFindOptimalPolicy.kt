@@ -51,8 +51,8 @@ fun main() {
         )
     )
 
-    val policyW2: StochasticOffloadingPolicy = RangedOptimalPolicyFinder.findOptimalPolicy(systemCofig, 30)
-    val policyW1 = RangedOptimalPolicyFinder.findOptimalPolicy(systemConfig2, 30)
+    val policyW2: StochasticOffloadingPolicy = RangedOptimalPolicyFinder.findOptimalPolicy(systemCofig, 0.1, 0.5, 30)
+    val policyW1 = RangedOptimalPolicyFinder.findOptimalPolicy(systemConfig2, 0.1, 0.5, 30)
 
     policyW1.stochasticPolicyConfig.decisionProbabilities.forEach { (stateAction: StateAction, probability: Double) ->
         val pW2 = policyW2.stochasticPolicyConfig.decisionProbabilities[stateAction]!!

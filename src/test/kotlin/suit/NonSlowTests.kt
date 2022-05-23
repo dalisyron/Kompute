@@ -9,13 +9,11 @@ import stochastic.PerformanceTests
 import stochastic.SlowTests
 import stochastic.StochasticPolicyTest
 import stochastic.dtmc.IndependentTransitionCalculatorTest
-import stochastic.lp.OffloadingLPCreatorTest
 
 @RunWith(Categories::class)
 @Categories.ExcludeCategory(SlowTests::class)
 @Suite.SuiteClasses(
     StochasticPolicyTest::class,
-    OffloadingLPCreatorTest::class,
     DTMCCreatorTests::class,
     StateConfigTest::class,
     IndependentTransitionCalculatorTest::class
@@ -26,7 +24,6 @@ class NonSlowTestsSuite
 @Categories.IncludeCategory(SlowTests::class)
 @Suite.SuiteClasses(
     StochasticPolicyTest::class,
-    OffloadingLPCreatorTest::class,
     DTMCCreatorTests::class,
     StateConfigTest::class,
     IndependentTransitionCalculatorTest::class

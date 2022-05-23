@@ -1,7 +1,7 @@
 package simulation.ue
 
 import core.policy.UserEquipmentExecutionState
-import dtmc.UserEquipmentStateManager
+import core.UserEquipmentStateManager
 import simulation.logger.Event
 import simulation.logger.Logger
 import policy.Action

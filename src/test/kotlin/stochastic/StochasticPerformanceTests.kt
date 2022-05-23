@@ -14,7 +14,6 @@ import core.ue.UserEquipmentStateConfig
 import org.junit.Test
 import org.junit.experimental.categories.Category
 import policy.Action
-import simulation.simulation.Simulator
 import stochastic.lp.OptimalPolicyFinder
 import stochastic.lp.RangedOptimalPolicyFinder
 
@@ -83,6 +82,14 @@ class StochasticPerformanceTests {
     fun testBig() {
         // run time in e1c21057b88ede25d4953f21f8e71db73e34dd12 was +10 min
         val config = getSimpleConfig().withEta(0.9).withTaskQueueCapacity(80).withNumberOfSections(30)
+        val optimalPolicy = OptimalPolicyFinder.findOptimalPolicy(config)
+        println(optimalPolicy.averageDelay)
+    }
+
+    @Test
+    @Category(PerformanceTests::class)
+    fun testSingle() {
+        val config = getSimpleConfig().withAlpha(0.1).withBeta(0.9).withTaskQueueCapacity(50)
         val optimalPolicy = OptimalPolicyFinder.findOptimalPolicy(config)
         println(optimalPolicy.averageDelay)
     }

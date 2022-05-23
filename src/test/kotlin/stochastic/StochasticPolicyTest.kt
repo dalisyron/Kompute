@@ -83,7 +83,7 @@ class StochasticPolicyTest {
     @Test
     @Category(SlowTests::class)
     fun testCompareSimulationWithLPForEta() {
-        val etas = (1..40).map { it * 2.0 / 100.0 }
+        val etas = (1..25).map { it * 2.0 / 100.0 }
 
         etas.forEach {
             println("testing for eta = $it")

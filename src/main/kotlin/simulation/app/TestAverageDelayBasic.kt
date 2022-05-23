@@ -15,7 +15,7 @@ fun main() {
     val stochasticPolicies: List<StochasticOffloadingPolicy> = alphas.map { alpha ->
         println("Calculating for alpha = $alpha")
         val systemConfig = Mock.configFromLiyu().withAlpha(alpha)
-        RangedOptimalPolicyFinder.findOptimalPolicy(systemConfig, 100)
+        RangedOptimalPolicyFinder.findOptimalPolicy(systemConfig, 0.0, 1.0, 100)
     }
 
     var lastPercent = 0.0

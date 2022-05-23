@@ -6,7 +6,7 @@ import core.policy.UserEquipmentExecutionState
 import stochastic.lp.StateAction
 import core.ue.OffloadingSystemConfig
 import core.ue.UserEquipmentStateConfig.Companion.allStates
-import dtmc.UserEquipmentStateManager
+import core.UserEquipmentStateManager
 import stochastic.lp.OffloadingSolver
 import java.lang.IllegalStateException
 import kotlin.math.abs
@@ -76,6 +76,7 @@ data class StochasticOffloadingPolicy(
             val rand = Random.nextDouble()
             // println("$cumulativeProbabilities | $rand")
             check(rand > 0)
+            // println("distribution = $distribution")
             check(abs(distribution.map { it.second }.sum() - 1.0) < 1e-9)
 
             for (i in 0 until cumulativeProbabilities.size - 1) {

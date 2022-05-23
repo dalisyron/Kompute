@@ -81,6 +81,10 @@ data class OffloadingSystemConfig(
         return tRx + nCloud + tTx
     }
 
+    fun stateCount(): Int {
+        return (taskQueueCapacity + 1) * (tuNumberOfPackets + 1) * (cpuNumberOfSections)
+    }
+
     val stateConfig = userEquipmentConfig.stateConfig
 
     companion object {
@@ -144,5 +148,12 @@ data class OffloadingSystemConfig(
             )
         }
 
+        fun OffloadingSystemConfig.withUserEquipmentStateConfig(userEquipmentStateConfig: UserEquipmentStateConfig): OffloadingSystemConfig {
+            return this.copy(
+                userEquipmentConfig = userEquipmentConfig.copy(
+                    stateConfig = userEquipmentStateConfig
+                )
+            )
+        }
     }
 }
