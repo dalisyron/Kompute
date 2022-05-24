@@ -11,6 +11,7 @@ import stochastic.lp.OffloadingSolver
 import java.lang.IllegalStateException
 import kotlin.math.abs
 import kotlin.random.Random
+import kotlin.system.exitProcess
 
 data class StochasticOffloadingPolicy(
     val stochasticPolicyConfig: OffloadingSolver.StochasticPolicyConfig,
@@ -21,7 +22,12 @@ data class StochasticOffloadingPolicy(
 
     override fun getActionForState(state: UserEquipmentExecutionState): Action {
         val actionProbabilities: List<Pair<Action, Double>> = systemConfig.allActions.map {
-            it to stochasticPolicyConfig.decisionProbabilities[StateAction(state.ueState, it)]!!
+            try {
+                it to stochasticPolicyConfig.decisionProbabilities[StateAction(state.ueState, it)]!!
+            } catch (e: java.lang.NullPointerException) {
+                println("${StateAction(state.ueState, it)} | ${systemConfig.stateConfig}")
+                exitProcess(1)
+            }
         }
 
         return getActionFromProbabilityDistribution(actionProbabilities)
@@ -77,7 +83,9 @@ data class StochasticOffloadingPolicy(
             // println("$cumulativeProbabilities | $rand")
             check(rand > 0)
             // println("distribution = $distribution")
-            check(abs(distribution.map { it.second }.sum() - 1.0) < 1e-9)
+            check(abs(distribution.map { it.second }.sum() - 1.0) < 1e-4) {
+                distribution
+            }
 
             for (i in 0 until cumulativeProbabilities.size - 1) {
                 if (rand > cumulativeProbabilities[i] && rand <= cumulativeProbabilities[i + 1]) {

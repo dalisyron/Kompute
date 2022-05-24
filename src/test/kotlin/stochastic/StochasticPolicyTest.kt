@@ -3,7 +3,6 @@ package stochastic
 import com.google.common.truth.Truth.assertThat
 import core.policy.GreedyOffloadFirstPolicy
 import core.environment.EnvironmentParameters
-import org.junit.Ignore
 import org.junit.Test
 import policy.Action
 import simulation.simulation.Simulator
@@ -41,7 +40,7 @@ class StochasticPolicyTest {
                 beta = 0.4,
                 eta = 0.0, // Not used in the baseline policies, set to whatever
                 pTx = 1.5,
-                pLoc = 1.5,
+                pLocal = 1.5,
                 pMax = 500.0
             )
         )

@@ -6,20 +6,36 @@ import simulation.simulation.Simulator
 import stochastic.lp.OptimalPolicyFinder
 import stochastic.policy.StochasticOffloadingPolicy
 import core.ue.OffloadingSystemConfig.Companion.withAlpha
+import core.ue.OffloadingSystemConfig.Companion.withBeta
 import core.ue.OffloadingSystemConfig.Companion.withEta
+import core.ue.OffloadingSystemConfig.Companion.withNumberOfPackets
+import core.ue.OffloadingSystemConfig.Companion.withNumberOfSections
+import core.ue.OffloadingSystemConfig.Companion.withPLocal
+import core.ue.OffloadingSystemConfig.Companion.withPMax
+import core.ue.OffloadingSystemConfig.Companion.withPTx
+import core.ue.OffloadingSystemConfig.Companion.withTaskQueueCapacity
 import stochastic.lp.RangedOptimalPolicyFinder
 
 fun main() {
-    val alphas: List<Double> = (1..50).map { (it * 1.0) / 100.0 }
+    val alphas: List<Double> = (1..54).map { (it * 2) / 300.0 }
+
+    val baseConfig = Mock.configFromLiyu()
+        .withPMax(2.5)
+        .withTaskQueueCapacity(20)
+        .withNumberOfSections(9)
+        .withPLocal(4.0/3.0)
+        .withBeta(0.99)
+        .withNumberOfPackets(3) // score tx = (1) / (4.0 * 3.0)
+        .withPTx(2.0)
 
     val stochasticPolicies: List<StochasticOffloadingPolicy> = alphas.map { alpha ->
         println("Calculating for alpha = $alpha")
-        val systemConfig = Mock.configFromLiyu().withAlpha(alpha)
-        RangedOptimalPolicyFinder.findOptimalPolicy(systemConfig, 0.0, 1.0, 100)
+        val systemConfig = baseConfig.withAlpha(alpha)
+        RangedOptimalPolicyFinder.findOptimalPolicy(systemConfig, 0.0, 0.99, 100)
     }
 
     var lastPercent = 0.0
-    val simulationTicks = 4000_000
+    val simulationTicks = 5_000_000
 
     val localOnlyDelays: MutableList<Double> = mutableListOf()
     val transmitOnlyDelays: MutableList<Double> = mutableListOf()
@@ -28,7 +44,7 @@ fun main() {
     val stochasticDelays: MutableList<Double> = mutableListOf()
 
     alphas.forEachIndexed { i, alpha ->
-        val systemConfig = Mock.configFromLiyu().withAlpha(alpha)
+        val systemConfig = baseConfig.withAlpha(alpha)
         val simulator = Simulator(systemConfig)
         val testPolicies = listOf(
             LocalOnlyPolicy,
@@ -54,17 +70,17 @@ fun main() {
     stochasticPolicies.forEach {
         println(it)
     }
-    plot.plot().add(alphas, localOnlyDelays).color("red").label("Local Only")
+    plot.plot().add(alphas, localOnlyDelays).color("tab:olive").label("Local Only")
     plot.plot().add(alphas, transmitOnlyDelays).color("blue").label("Offload Only")
     plot.plot().add(alphas, greedyOffloadFirstDelays).color("green").label("Greedy (Offload First)")
     plot.plot().add(alphas, greedyLocalFirstDelays).color("cyan").label("Greedy (Local First)")
-    plot.plot().add(alphas, stochasticDelays).color("black").label("Optimal Stochastic")
+    plot.plot().add(alphas, stochasticDelays).color("red").label("Optimal Stochastic")
 
     plot.xlabel("The average arrival rate (alpha)")
     plot.ylabel("The average delay")
     plot.title("Average delay for policies")
-    plot.ylim(0, 60)
-    plot.xlim(0, 1.0)
+    plot.ylim(0, 20)
+    plot.xlim(0, 0.4)
     plot.legend()
     plot.show()
 }

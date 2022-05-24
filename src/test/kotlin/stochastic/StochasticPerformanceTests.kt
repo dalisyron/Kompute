@@ -1,6 +1,5 @@
 package stochastic
 
-import com.google.common.truth.Truth
 import core.environment.EnvironmentParameters
 import core.ue.OffloadingSystemConfig
 import core.ue.OffloadingSystemConfig.Companion.withAlpha
@@ -37,7 +36,7 @@ class StochasticPerformanceTests {
                 beta = 0.9,
                 eta = 0.0, // Not used in the baseline policies, set to whatever
                 pTx = 1.5,
-                pLoc = 1.5,
+                pLocal = 1.5,
                 pMax = 500.0
             )
         )

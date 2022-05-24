@@ -22,10 +22,10 @@ object Mock {
             ),
             componentsConfig = UserEquipmentComponentsConfig(
                 alpha = 0.4,
-                beta = 0.4,
+                beta = 0.5,
                 eta = 0.0, // Not used in the baseline policies, set to whatever
                 pTx = 1.4,
-                pLoc = 0.3,
+                pLocal = 0.3,
                 pMax = 1.6
             )
         )

@@ -3,7 +3,6 @@ package stochastic.app
 import core.environment.EnvironmentParameters
 import policy.Action
 import stochastic.lp.StateAction
-import stochastic.lp.OptimalPolicyFinder
 import stochastic.policy.StochasticOffloadingPolicy
 import core.ue.OffloadingSystemConfig
 import core.ue.UserEquipmentComponentsConfig
@@ -28,7 +27,7 @@ fun main() {
             beta = 0.4,
             eta = 0.2,
             pTx = 1.0,
-            pLoc = 0.8,
+            pLocal = 0.8,
             pMax = 2.0
         )
     )

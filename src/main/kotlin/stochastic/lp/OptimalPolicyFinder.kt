@@ -125,6 +125,14 @@ class OffloadingSolver(
             }
         }
 
+        for (state in allStates) {
+            for (action in systemConfig.allActions) {
+                check(decisions.contains(StateAction(state, action))) {
+                    StateAction(state, action)
+                }
+            }
+        }
+
         return StochasticPolicyConfig(
             decisionProbabilities = decisions,
             eta = systemConfig.eta,

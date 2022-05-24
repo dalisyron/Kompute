@@ -5,6 +5,7 @@ import com.google.ortools.glop.GlopParameters
 import com.google.ortools.linearsolver.MPConstraint
 import com.google.ortools.linearsolver.MPSolver
 import java.lang.IllegalArgumentException
+import kotlin.math.pow
 
 fun MPSolver.makeEqualityConstraint(rhs: Double, name: String): MPConstraint {
     return makeConstraint(rhs, rhs, name)
@@ -21,7 +22,7 @@ object LPSolver {
         Loader.loadNativeLibraries()
     }
 
-    fun solve(lp: StandardLinearProgram, defaultTolerance: Boolean = true): LPSolution {
+    fun solve(lp: StandardLinearProgram, retryCounter: Int = 0): LPSolution {
         val rows = lp.rows.requireNoNulls()
         check(rows.map { it.coefficients.size }.toSet().size == 1) // Check there is an equal number of variables for each row
 
@@ -38,8 +39,12 @@ object LPSolver {
         val variableCount = rows[0].coefficients.size
 
         val solver = MPSolver.createSolver("GLOP")
-        if (!defaultTolerance) {
-            solver.setSolverSpecificParametersAsString(GlopParameters.newBuilder().setSolutionFeasibilityTolerance(1e-4).build().toString())
+        when (retryCounter) {
+            0 -> {}
+            in (1..MAX_RETRIES) -> {
+                solver.setSolverSpecificParametersAsString(GlopParameters.newBuilder().setSolutionFeasibilityTolerance(10.0.pow(-6 + retryCounter)).build().toString())
+            }
+            else -> throw IllegalArgumentException()
         }
 
 
@@ -84,9 +89,9 @@ object LPSolver {
 
         val resultStatus = solver.solve()
 
-        if (resultStatus != MPSolver.ResultStatus.OPTIMAL && defaultTolerance) {
+        if (resultStatus != MPSolver.ResultStatus.OPTIMAL && retryCounter < MAX_RETRIES) {
             println("Log: Result status was $resultStatus. Retrying with relaxed tolerance...")
-            return solve(lp, defaultTolerance = false)
+            return solve(lp, retryCounter + 1)
         }
 
         if (resultStatus != MPSolver.ResultStatus.OPTIMAL) {
@@ -98,4 +103,6 @@ object LPSolver {
             variableValues = variables.map { it.solutionValue() }
         )
     }
+
+    val MAX_RETRIES = 16
 }

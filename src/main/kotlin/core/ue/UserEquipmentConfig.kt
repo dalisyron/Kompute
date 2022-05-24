@@ -16,7 +16,7 @@ data class UserEquipmentConfig(
     val alpha: Double = componentsConfig.alpha
     val eta: Double = componentsConfig.eta
     val pTx: Double = componentsConfig.pTx
-    val pLoc: Double = componentsConfig.pLoc
+    val pLoc: Double = componentsConfig.pLocal
 }
 
 data class UserEquipmentStateConfig(
@@ -46,7 +46,7 @@ data class UserEquipmentComponentsConfig(
     val alpha: Double,
     val eta: Double,
     val pTx: Double,
-    val pLoc: Double,
+    val pLocal: Double,
     val pMax: Double
 )
 
@@ -63,7 +63,7 @@ data class OffloadingSystemConfig(
     val alpha: Double = userEquipmentConfig.componentsConfig.alpha
     val eta: Double = userEquipmentConfig.componentsConfig.eta
     val pTx: Double = userEquipmentConfig.componentsConfig.pTx
-    val pLoc: Double = userEquipmentConfig.componentsConfig.pLoc
+    val pLoc: Double = userEquipmentConfig.componentsConfig.pLocal
     val nCloud: Int = environmentParameters.nCloud
     val tRx: Int = environmentParameters.tRx
     val pMax: Double = userEquipmentConfig.componentsConfig.pMax
@@ -138,6 +138,17 @@ data class OffloadingSystemConfig(
             )
         }
 
+
+        fun OffloadingSystemConfig.withNumberOfPackets(tuNumberOfPackets: Int): OffloadingSystemConfig {
+            return this.copy(
+                userEquipmentConfig = userEquipmentConfig.copy(
+                    stateConfig = userEquipmentConfig.stateConfig.copy(
+                        tuNumberOfPackets = tuNumberOfPackets
+                    )
+                )
+            )
+        }
+
         fun OffloadingSystemConfig.withPMax(pMax: Double): OffloadingSystemConfig {
             return this.copy(
                 userEquipmentConfig = userEquipmentConfig.copy(
@@ -155,5 +166,26 @@ data class OffloadingSystemConfig(
                 )
             )
         }
+
+        fun OffloadingSystemConfig.withPLocal(pLocal: Double): OffloadingSystemConfig {
+            return this.copy(
+                userEquipmentConfig = userEquipmentConfig.copy(
+                    componentsConfig = userEquipmentConfig.componentsConfig.copy(
+                        pLocal = pLocal
+                    )
+                )
+            )
+        }
+
+        fun OffloadingSystemConfig.withPTx(pTx: Double): OffloadingSystemConfig {
+            return this.copy(
+                userEquipmentConfig = userEquipmentConfig.copy(
+                    componentsConfig = userEquipmentConfig.componentsConfig.copy(
+                        pTx = pTx
+                    )
+                )
+            )
+        }
+
     }
 }
