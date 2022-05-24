@@ -72,7 +72,7 @@ class StochasticPerformanceTests {
     fun testRanged1() {
         // run time in e1c21057b88ede25d4953f21f8e71db73e34dd12 was 4 min 19 sec
         val baseConfig = getSimpleConfig().withAlpha(0.1).withBeta(0.9).withTaskQueueCapacity(50)
-        val optimalPolicy = RangedOptimalPolicyFinder.findOptimalPolicy(baseConfig, 30)
+        val optimalPolicy = RangedOptimalPolicyFinder.findOptimalPolicy(baseConfig, 0.0, 1.0, 20)
         println(optimalPolicy.averageDelay)
     }
 

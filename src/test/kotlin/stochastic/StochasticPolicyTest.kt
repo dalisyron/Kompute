@@ -64,6 +64,8 @@ class StochasticPolicyTest {
         val simpleConfig = getSimpleConfig().withTaskQueueCapacity(10).withEta(1e-9)
         val stochasticPolicy = RangedOptimalPolicyFinder.findOptimalPolicy(
             simpleConfig,
+            0.0,
+            1.0,
             50
         ) // 25 was 7.53 // 100 was 7.92 // 25 was 7.50 // 100 was 7.95
 

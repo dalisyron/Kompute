@@ -98,8 +98,13 @@ object LPSolver {
             throw IllegalArgumentException("The given LP does not have an optimal solution | status = $resultStatus")
         }
 
+        val obj = if (retryCounter == 0) {
+            solver.objective().value()
+        } else {
+            Double.POSITIVE_INFINITY
+        }
         return LPSolution(
-            objectiveValue = solver.objective().value(),
+            objectiveValue = obj,
             variableValues = variables.map { it.solutionValue() }
         )
     }

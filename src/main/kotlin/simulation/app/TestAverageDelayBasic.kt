@@ -17,25 +17,25 @@ import core.ue.OffloadingSystemConfig.Companion.withTaskQueueCapacity
 import stochastic.lp.RangedOptimalPolicyFinder
 
 fun main() {
-    val alphas: List<Double> = (1..54).map { (it * 2) / 300.0 }
+    val alphas: List<Double> = (30..44).map { (it * 0.5) / 100.0 }
 
     val baseConfig = Mock.configFromLiyu()
         .withPMax(2.5)
-        .withTaskQueueCapacity(20)
+        .withTaskQueueCapacity(15)
         .withNumberOfSections(9)
         .withPLocal(4.0/3.0)
         .withBeta(0.99)
-        .withNumberOfPackets(3) // score tx = (1) / (4.0 * 3.0)
+        .withNumberOfPackets(7) // score tx = (1) / (4.0 * 3.0)
         .withPTx(2.0)
 
     val stochasticPolicies: List<StochasticOffloadingPolicy> = alphas.map { alpha ->
         println("Calculating for alpha = $alpha")
         val systemConfig = baseConfig.withAlpha(alpha)
-        RangedOptimalPolicyFinder.findOptimalPolicy(systemConfig, 0.0, 0.99, 100)
+        RangedOptimalPolicyFinder.findOptimalPolicy(systemConfig, 0.0, 0.99, 75)
     }
 
     var lastPercent = 0.0
-    val simulationTicks = 5_000_000
+    val simulationTicks = 1_000_000
 
     val localOnlyDelays: MutableList<Double> = mutableListOf()
     val transmitOnlyDelays: MutableList<Double> = mutableListOf()
@@ -62,7 +62,7 @@ fun main() {
         greedyOffloadFirstDelays.add(delays[2])
         greedyLocalFirstDelays.add(delays[3])
         stochasticDelays.add(delays[4])
-        println("$i from ${alphas.size}")
+        println("simulating ${i + 1} from ${alphas.size}")
     }
 
     val plot = Plot.create()
