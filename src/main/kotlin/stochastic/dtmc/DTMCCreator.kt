@@ -5,7 +5,7 @@ import stochastic.dtmc.transition.Edge
 import ue.UserEquipmentState
 import core.ue.UserEquipmentStateConfig
 import core.ue.UserEquipmentStateConfig.Companion.allStates
-import core.PossibleActionProvider
+import core.StateManagerConfig
 
 data class DiscreteTimeMarkovChain(
     val stateConfig: UserEquipmentStateConfig,
@@ -14,16 +14,17 @@ data class DiscreteTimeMarkovChain(
 )
 
 class DTMCCreator(
-    private val stateConfig: UserEquipmentStateConfig,
+    private val stateManagerConfig: StateManagerConfig
 ) {
-    private val stateManager: UserEquipmentStateManager = UserEquipmentStateManager(stateConfig)
+    private val stateManager: UserEquipmentStateManager = UserEquipmentStateManager(stateManagerConfig)
 
     fun create(): DiscreteTimeMarkovChain {
         val adjacencyList: Map<UserEquipmentState, List<Edge>> =
-            stateConfig.allStates().associateWith { stateManager.getUniqueEdgesForState(it) }
+            stateManagerConfig.userEquipmentStateConfig.allStates()
+                .associateWith { stateManager.getUniqueEdgesForState(it) }
 
         return DiscreteTimeMarkovChain(
-            stateConfig = stateConfig,
+            stateConfig = stateManagerConfig.userEquipmentStateConfig,
             startState = UserEquipmentState(0, 0, 0),
             adjacencyList = adjacencyList
         )

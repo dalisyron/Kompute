@@ -30,8 +30,8 @@ data class StateAction(
 class OffloadingLPCreator(
     val systemConfig: OffloadingSystemConfig
 ) {
-    private val userEquipmentStateManager = UserEquipmentStateManager(systemConfig.stateConfig)
-    private val dtmcCreator: DTMCCreator = DTMCCreator(systemConfig.stateConfig)
+    private val userEquipmentStateManager = UserEquipmentStateManager(systemConfig.getStateManagerConfig())
+    private val dtmcCreator: DTMCCreator = DTMCCreator(systemConfig.getStateManagerConfig())
 
     private lateinit var allStates: List<UserEquipmentState>
     private lateinit var indexMapping: IndexMapping
@@ -54,14 +54,9 @@ class OffloadingLPCreator(
         val rhsObjective = -expectedTaskTime()
         val coefficients = mutableListOfZeros(indexMapping.variableCount)
 
-        for (state in allStates) {
-            val possibleActions = possibleActionsByState[state]!!
-            val coefficientValue = state.taskQueueLength / systemConfig.alpha
-
-            for (action in possibleActions) {
-                val index = variableIndex(state, action)
-                coefficients[index] = coefficientValue
-            }
+        indexMapping.coefficientIndexByStateAction.forEach { (stateAction: StateAction, index: Int) ->
+            val coefficientValue = stateAction.state.taskQueueLength / systemConfig.alpha
+            coefficients[index] = coefficientValue
         }
 
         return EquationRow(
@@ -84,30 +79,28 @@ class OffloadingLPCreator(
         val rhsEquation2 = systemConfig.pMax
         val coefficients = mutableListOfZeros(indexMapping.variableCount)
 
-        for (state in allStates) {
-            val possibleActions = possibleActionsByState[state]!!
-            for (action in possibleActions) {
-                var coefficientValue = 0.0
+        indexMapping.coefficientIndexByStateAction.forEach { (stateAction, index) ->
+            val (state, action) = stateAction
+            var coefficientValue = 0.0
 
-                if (state.tuState > 0 || (action in listOf(
-                        Action.AddToTransmissionUnit,
-                        Action.AddToBothUnits
-                    ))
-                ) {
-                    coefficientValue += beta * pTx
-                }
-
-                if (state.cpuState > 0 || (action in listOf(
-                        Action.AddToCPU,
-                        Action.AddToBothUnits
-                    ))
-                ) {
-                    coefficientValue += pLoc
-                }
-
-                val index = variableIndex(state, action)
-                coefficients[index] = coefficientValue
+            if (state.tuState > 0 || (action in listOf(
+                    Action.AddToTransmissionUnit,
+                    Action.AddToBothUnits
+                ))
+            ) {
+                coefficientValue += beta * pTx
             }
+
+            if (state.cpuState > 0 || (action in listOf(
+                    Action.AddToCPU,
+                    Action.AddToBothUnits
+                ))
+            ) {
+                coefficientValue += pLoc
+            }
+
+            coefficients[index] = coefficientValue
+
         }
 
         return EquationRow(
@@ -121,28 +114,24 @@ class OffloadingLPCreator(
         val coefficients = mutableListOfZeros(indexMapping.variableCount)
         val rhsEquation3 = 0.0
 
-        for (state in allStates) {
-            val possibleActions = userEquipmentStateManager.getPossibleActions(state)
-
-            for (action in possibleActions) {
-                val coefficientValue = when (action) {
-                    Action.AddToCPU -> {
-                        (1.0 - systemConfig.eta)
-                    }
-                    Action.AddToBothUnits -> {
-                        (1.0 - 2 * systemConfig.eta)
-                    }
-                    Action.AddToTransmissionUnit -> {
-                        (-systemConfig.eta)
-                    }
-                    Action.NoOperation -> {
-                        0.0
-                    }
+        indexMapping.coefficientIndexByStateAction.forEach { (stateAction, index) ->
+            val (state, action) = stateAction
+            val coefficientValue = when (action) {
+                Action.AddToCPU -> {
+                    (1.0 - systemConfig.eta)
                 }
-
-                val index = variableIndex(state, action)
-                coefficients[index] = coefficientValue
+                Action.AddToBothUnits -> {
+                    (1.0 - 2 * systemConfig.eta)
+                }
+                Action.AddToTransmissionUnit -> {
+                    (-systemConfig.eta)
+                }
+                Action.NoOperation -> {
+                    0.0
+                }
             }
+
+            coefficients[index] = coefficientValue
         }
 
         return EquationRow(
@@ -166,20 +155,17 @@ class OffloadingLPCreator(
         val coefficients = mutableListOf<Double>()
         for (i in 0 until indexMapping.variableCount) coefficients.add(0.0)
 
-        for (sourceState in allStates) {
-            val possibleActions = possibleActionsByState[sourceState]!!
-            for (action in possibleActions) {
-                val independentTransitionValue = itCalculator.getIndependentTransitionFraction(sourceState, destState, action)
+        indexMapping.coefficientIndexByStateAction.forEach { (stateAction, index) ->
+            val (sourceState, action) = stateAction
+            val independentTransitionValue = itCalculator.getIndependentTransitionFraction(sourceState, destState, action)
 
-                val coefficientValue: Double = if (sourceState == destState) {
-                    independentTransitionValue - 1
-                } else {
-                    independentTransitionValue
-                }
-
-                val index = indexMapping.coefficientIndexByStateAction[StateAction(sourceState, action)]!!
-                coefficients[index] = coefficientValue
+            val coefficientValue: Double = if (sourceState == destState) {
+                independentTransitionValue - 1
+            } else {
+                independentTransitionValue
             }
+
+            coefficients[index] = coefficientValue
         }
 
         return EquationRow(coefficients = coefficients, rhs = rhsEquation4)
@@ -189,22 +175,14 @@ class OffloadingLPCreator(
         val rhsEquation5 = 1.0
         val coefficients = mutableListOfZeros(indexMapping.variableCount)
 
-        for (state in allStates) {
-            val possibleActions = possibleActionsByState[state]!!
-            for (action in possibleActions) {
-                val index: Int = variableIndex(state, action)
-                coefficients[index] = 1.0
-            }
+        indexMapping.coefficientIndexByStateAction.forEach { (stateAction, index) ->
+            coefficients[index] = 1.0
         }
 
         return EquationRow(
             coefficients = coefficients,
             rhs = rhsEquation5
         )
-    }
-
-    private fun variableIndex(state: UserEquipmentState, action: Action): Int {
-        return indexMapping.coefficientIndexByStateAction[StateAction(state, action)]!!
     }
 
     private fun populatePossibleActions() {
@@ -245,6 +223,9 @@ class OffloadingLPCreator(
 
         var indexPtr = 0
         for (state in allStates) {
+            if (!userEquipmentStateManager.isStatePossible(state)) {
+                continue
+            }
             val possibleActions = userEquipmentStateManager.getPossibleActions(state)
             for (action in possibleActions) {
                 val stateAction = StateAction(state, action)

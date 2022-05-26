@@ -18,9 +18,9 @@ class SimulationReportCreator(
 
         // val transmissionTimes = mutableListOf<Int>()
 
-        val taskDelays: Map<Int, Int> = eventsById.mapValues { (_, list) ->
+        val taskDelays: Map<Int, Double> = eventsById.mapValues { (_, list) ->
             val startTime: Int = list.find { it is Event.TaskArrival }!!.timeSlot
-            val finishTime: Int = if (list.any { it is Event.TaskTransmittedByTU }) {
+            val finishTime: Double = if (list.any { it is Event.TaskTransmittedByTU }) {
                 val transmittedTime = list.find { it is Event.TaskTransmittedByTU }!!.timeSlot
 
                 // val sentForTransmissionTime = list.find { it is Event.TaskSentToTU }!!.timeSlot
@@ -28,7 +28,7 @@ class SimulationReportCreator(
 
                 transmittedTime + systemConfig.tRx + systemConfig.nCloud
             } else {
-                list.find { it is Event.TaskProcessedByCPU }!!.timeSlot
+                list.find { it is Event.TaskProcessedByCPU }!!.timeSlot.toDouble()
             }
 
             return@mapValues finishTime - startTime

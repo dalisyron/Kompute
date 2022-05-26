@@ -1,6 +1,8 @@
 package stochastic
+
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
+import core.StateManagerConfig
 import stochastic.dtmc.DTMCCreator
 import stochastic.dtmc.transition.Edge
 import dtmc.symbol.ParameterSymbol
@@ -16,7 +18,7 @@ internal class DTMCCreatorTests {
         tuNumberOfPackets = 4,
         cpuNumberOfSections = 3
     )
-    private var creator: DTMCCreator = DTMCCreator(sampleStateConfig1)
+    private var creator: DTMCCreator = DTMCCreator(StateManagerConfig(sampleStateConfig1))
 
 
     @Test
@@ -47,7 +49,7 @@ internal class DTMCCreatorTests {
             tuNumberOfPackets = 1,
             cpuNumberOfSections = 17
         )
-        val creatorTemp = DTMCCreator(config)
+        val creatorTemp = DTMCCreator(StateManagerConfig(config))
         val chain = creatorTemp.create()
 
         val edges = chain.adjacencyList[UserEquipmentState(1, 0, 0)]!!
@@ -137,16 +139,15 @@ internal class DTMCCreatorTests {
     }
 
 
-
-
-
     @Test
     fun testSymbols4() {
         val creatorTemp = DTMCCreator(
-            stateConfig = UserEquipmentStateConfig(
-                taskQueueCapacity = 10, // set to some big number,
-                tuNumberOfPackets = 5,
-                cpuNumberOfSections = 8
+            StateManagerConfig(
+                UserEquipmentStateConfig(
+                    taskQueueCapacity = 10, // set to some big number,
+                    tuNumberOfPackets = 5,
+                    cpuNumberOfSections = 8
+                )
             )
         )
 
@@ -217,10 +218,12 @@ internal class DTMCCreatorTests {
     @Test
     fun testSymbols5() {
         val creatorTemp = DTMCCreator(
-            stateConfig = UserEquipmentStateConfig(
-                taskQueueCapacity = 10, // set to some big number,
-                tuNumberOfPackets = 5,
-                cpuNumberOfSections = 8
+            StateManagerConfig(
+                UserEquipmentStateConfig(
+                    taskQueueCapacity = 10, // set to some big number,
+                    tuNumberOfPackets = 5,
+                    cpuNumberOfSections = 8
+                )
             )
         )
 
@@ -275,10 +278,12 @@ internal class DTMCCreatorTests {
     @Test
     fun testSymbols() {
         val creatorTemp = DTMCCreator(
-            stateConfig = UserEquipmentStateConfig(
-                taskQueueCapacity = 10, // set to some big number,
-                tuNumberOfPackets = 5,
-                cpuNumberOfSections = 8
+            StateManagerConfig(
+                UserEquipmentStateConfig(
+                    taskQueueCapacity = 10, // set to some big number,
+                    tuNumberOfPackets = 5,
+                    cpuNumberOfSections = 8
+                )
             )
         )
 

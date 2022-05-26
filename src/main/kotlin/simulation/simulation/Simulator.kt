@@ -10,7 +10,7 @@ import kotlin.system.exitProcess
 class Simulator(
     systemConfig: OffloadingSystemConfig
 ) : UserEquipmentTimingInfoProvider {
-    private val userEquipment: UserEquipment = UserEquipment(this, systemConfig.userEquipmentConfig)
+    private val userEquipment: UserEquipment = UserEquipment(this, systemConfig)
     private val simulationReportCreator: SimulationReportCreator = SimulationReportCreator(systemConfig)
     private var clock: Int = 0
     private val logger = Logger()

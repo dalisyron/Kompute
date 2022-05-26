@@ -1,5 +1,6 @@
 package core.ue
 
+import core.StateManagerConfig
 import core.environment.EnvironmentParameters
 import policy.Action
 import ue.UserEquipmentState
@@ -65,7 +66,7 @@ data class OffloadingSystemConfig(
     val pTx: Double = userEquipmentConfig.componentsConfig.pTx
     val pLoc: Double = userEquipmentConfig.componentsConfig.pLocal
     val nCloud: Int = environmentParameters.nCloud
-    val tRx: Int = environmentParameters.tRx
+    val tRx: Double = environmentParameters.tRx
     val pMax: Double = userEquipmentConfig.componentsConfig.pMax
     val tTx: Double by lazy {
         var expectedSingleDelay = 0.0
@@ -86,6 +87,23 @@ data class OffloadingSystemConfig(
     }
 
     val stateConfig = userEquipmentConfig.stateConfig
+
+    fun getLimitation(): StateManagerConfig.Limitation {
+        if (eta == 1.0) {
+            return StateManagerConfig.Limitation.LocalOnly
+        } else if (eta == 0.0) {
+            return StateManagerConfig.Limitation.OffloadOnly
+        } else {
+            return StateManagerConfig.Limitation.None
+        }
+    }
+
+    fun getStateManagerConfig(): StateManagerConfig {
+        return StateManagerConfig(
+            userEquipmentStateConfig = stateConfig,
+            limitation = getLimitation()
+        )
+    }
 
     companion object {
         fun OffloadingSystemConfig.withAlpha(alpha: Double): OffloadingSystemConfig {
@@ -183,6 +201,14 @@ data class OffloadingSystemConfig(
                     componentsConfig = userEquipmentConfig.componentsConfig.copy(
                         pTx = pTx
                     )
+                )
+            )
+        }
+
+        fun OffloadingSystemConfig.withTRx(tRx: Double): OffloadingSystemConfig {
+            return this.copy(
+                environmentParameters = environmentParameters.copy(
+                    tRx = tRx
                 )
             )
         }

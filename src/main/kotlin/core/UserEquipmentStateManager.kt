@@ -9,15 +9,27 @@ import stochastic.dtmc.EdgeProvider
 import stochastic.dtmc.transition.Edge
 import stochastic.dtmc.transition.Transition
 import stochastic.dtmc.transition.toEdge
+import ue.UserEquipmentState.Companion.validate
 
-class UserEquipmentStateManager(private val config: UserEquipmentStateConfig) : PossibleActionProvider, EdgeProvider {
+data class StateManagerConfig(
+    val userEquipmentStateConfig: UserEquipmentStateConfig,
+    val limitation: Limitation = Limitation.None
+) {
+
+    enum class Limitation {
+        None, LocalOnly, OffloadOnly
+    }
+}
+
+class UserEquipmentStateManager(private val config: StateManagerConfig) : PossibleActionProvider, EdgeProvider {
+    private val userEquipmentStateConfig = config.userEquipmentStateConfig
 
     fun addTaskNextState(state: UserEquipmentState): UserEquipmentState {
         // TODO test this
-        if (state.taskQueueLength == config.taskQueueCapacity) {
+        if (state.taskQueueLength == userEquipmentStateConfig.taskQueueCapacity) {
             throw TaskQueueFullException()
         }
-        require(state.taskQueueLength in 0 until config.taskQueueCapacity)
+        require(state.taskQueueLength in 0 until userEquipmentStateConfig.taskQueueCapacity)
 
         return state.copy(
             taskQueueLength = state.taskQueueLength + 1
@@ -26,7 +38,7 @@ class UserEquipmentStateManager(private val config: UserEquipmentStateConfig) : 
 
     fun advanceCPUNextState(state: UserEquipmentState): UserEquipmentState {
         check(state.cpuState >= 0)
-        val nextCpuState: Int = if (state.cpuState == config.cpuNumberOfSections - 1) 0 else state.cpuState + 1
+        val nextCpuState: Int = if (state.cpuState == userEquipmentStateConfig.cpuNumberOfSections - 1) 0 else state.cpuState + 1
 
         return state.copy(
             cpuState = nextCpuState
@@ -35,7 +47,7 @@ class UserEquipmentStateManager(private val config: UserEquipmentStateConfig) : 
 
     fun advanceTUNextState(state: UserEquipmentState): UserEquipmentState {
         check(state.tuState > 0)
-        val nextTuState: Int = if (state.tuState == config.tuNumberOfPackets) 0 else state.tuState + 1
+        val nextTuState: Int = if (state.tuState == userEquipmentStateConfig.tuNumberOfPackets) 0 else state.tuState + 1
         return state.copy(
             tuState = nextTuState
         )
@@ -79,16 +91,16 @@ class UserEquipmentStateManager(private val config: UserEquipmentStateConfig) : 
         val res = mutableListOf<Action>(Action.NoOperation)
 
         if (taskQueueLength >= 1) {
-            if (tuState == 0) {
+            if (tuState == 0 && config.limitation != StateManagerConfig.Limitation.LocalOnly) {
                 res.add(Action.AddToTransmissionUnit)
             }
-            if (cpuState == 0) {
+            if (cpuState == 0 && config.limitation != StateManagerConfig.Limitation.OffloadOnly) {
                 res.add(Action.AddToCPU)
             }
         }
 
         if (taskQueueLength >= 2) {
-            if (tuState == 0 && cpuState == 0)
+            if (tuState == 0 && cpuState == 0 && config.limitation == StateManagerConfig.Limitation.None)
                 res.add(Action.AddToBothUnits)
         }
 
@@ -138,7 +150,7 @@ class UserEquipmentStateManager(private val config: UserEquipmentStateConfig) : 
             advanceCPUIfActiveNextState(it)
         }.let {
             val destinations: List<Pair<UserEquipmentState, List<Symbol>>>
-            if (it.taskQueueLength < config.taskQueueCapacity) {
+            if (it.taskQueueLength < userEquipmentStateConfig.taskQueueCapacity) {
                 if (it.tuState == 0) {
                     destinations = listOf<Pair<UserEquipmentState, List<Symbol>>>(
                         it to listOf<Symbol>(ParameterSymbol.AlphaC, action),
@@ -182,6 +194,19 @@ class UserEquipmentStateManager(private val config: UserEquipmentStateConfig) : 
             }
         }
     }
+
+    fun isStatePossible(state: UserEquipmentState): Boolean {
+        if (config.limitation == StateManagerConfig.Limitation.LocalOnly && state.tuState > 0) {
+            return false
+        }
+
+        if (config.limitation == StateManagerConfig.Limitation.OffloadOnly && state.cpuState > 0) {
+            return false
+        }
+
+        return true
+    }
+
     class TaskQueueFullException : IllegalStateException()
 }
 

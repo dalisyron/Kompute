@@ -8,6 +8,7 @@ import core.ue.OffloadingSystemConfig
 import core.ue.UserEquipmentStateConfig.Companion.allStates
 import core.UserEquipmentStateManager
 import stochastic.lp.OffloadingSolver
+import ue.UserEquipmentState
 import java.lang.IllegalStateException
 import kotlin.math.abs
 import kotlin.random.Random
@@ -18,7 +19,7 @@ data class StochasticOffloadingPolicy(
     val systemConfig: OffloadingSystemConfig
 ) : Policy {
     val averageDelay = stochasticPolicyConfig.averageDelay
-    private val userEquipmentStateManager: UserEquipmentStateManager = UserEquipmentStateManager(systemConfig.stateConfig)
+    private val userEquipmentStateManager: UserEquipmentStateManager = UserEquipmentStateManager(systemConfig.getStateManagerConfig())
 
     override fun getActionForState(state: UserEquipmentExecutionState): Action {
         val actionProbabilities: List<Pair<Action, Double>> = systemConfig.allActions.map {
@@ -58,42 +59,39 @@ data class StochasticOffloadingPolicy(
         }
     }
 
-    fun fullQueueProbability(): Double {
-        return stochasticPolicyConfig.fullQueueProbability()
-    }
-
     override fun toString(): String {
         val lines = mutableListOf<String>()
         lines.add("===============")
         lines.add("POLICY : ")
         lines.add("eta = ${stochasticPolicyConfig.eta}")
-        stochasticPolicyConfig.decisionProbabilities.forEach { (key: StateAction, value: Double) ->
-            lines.add("$key : $value")
+        val probabilityMap: Map<UserEquipmentState, List<Map.Entry<StateAction, Double>>> = stochasticPolicyConfig.decisionProbabilities.entries.groupBy { it.key.state }
+
+        probabilityMap.forEach { (state, probabilities) ->
+            lines.add("$state | ${probabilities.map { it.key.action to it.value }.joinToString(" ")}")
         }
+
         lines.add("=============+=")
         return lines.joinToString(separator = "\n")
     }
 
-    companion object {
-
-        fun getActionFromProbabilityDistribution(distribution: List<Pair<Action, Double>>): Action {
-            val cumulativeProbabilities = distribution.map { it.second }.scan(0.0) { acc, d -> acc + d }
-            // println("Cumulative probabilities = $cumulativeProbabilities")
-            val rand = Random.nextDouble()
-            // println("$cumulativeProbabilities | $rand")
-            check(rand > 0)
-            // println("distribution = $distribution")
-            check(abs(distribution.map { it.second }.sum() - 1.0) < 1e-4) {
-                distribution
-            }
-
-            for (i in 0 until cumulativeProbabilities.size - 1) {
-                if (rand > cumulativeProbabilities[i] && rand <= cumulativeProbabilities[i + 1]) {
-                    return distribution[i].first
-                }
-            }
-
-            throw IllegalStateException("rand = $rand | cumulative =$cumulativeProbabilities | distribution = $distribution")
+    fun getActionFromProbabilityDistribution(distribution: List<Pair<Action, Double>>): Action {
+        val cumulativeProbabilities = distribution.map { it.second }.scan(0.0) { acc, d -> acc + d }
+        // println("Cumulative probabilities = $cumulativeProbabilities")
+        val rand = Random.nextDouble()
+        check(distribution.map { it.second }.all { it in 0.0..1.0 })
+        // println("$cumulativeProbabilities | $rand")
+        check(rand > 0)
+        // println("distribution = $distribution")
+        check(abs(distribution.map { it.second }.sum() - 1.0) < 1e-4) {
+            distribution
         }
+
+        for (i in 0 until cumulativeProbabilities.size - 1) {
+            if (rand > cumulativeProbabilities[i] && rand <= cumulativeProbabilities[i + 1]) {
+                return distribution[i].first
+            }
+        }
+
+        throw IllegalStateException("rand = $rand | cumulative =$cumulativeProbabilities | distribution = $distribution")
     }
 }

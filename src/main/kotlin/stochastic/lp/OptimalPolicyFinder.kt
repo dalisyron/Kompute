@@ -18,15 +18,25 @@ object RangedOptimalPolicyFinder {
             val eta = rangeStart + (rangeEnd - rangeStart) * (i.toDouble() / precision)
             println("cycle $i of $precision | eta = $eta | alpha = ${baseSystemConfig.alpha}")
             val etaConfig = baseSystemConfig.withEta(eta)
-            val optimalPolicyWithGivenEta = OptimalPolicyFinder.findOptimalPolicy(etaConfig, true)
+            try {
+                val optimalPolicyWithGivenEta = OptimalPolicyFinder.findOptimalPolicy(etaConfig, true)
 
-            if (optimalPolicy == null || optimalPolicyWithGivenEta.averageDelay < optimalPolicy.averageDelay) {
-                optimalPolicy = optimalPolicyWithGivenEta
+                if (optimalPolicy == null || optimalPolicyWithGivenEta.averageDelay < optimalPolicy.averageDelay) {
+                    optimalPolicy = optimalPolicyWithGivenEta
+                }
+            } catch (e: IneffectivePolicyException) {
+                continue
             }
         }
 
-        return optimalPolicy!!
+        if (optimalPolicy == null) {
+            throw NoEffectivePolicyFoundException("No effective policy was found for the given system config which has alpha = ${baseSystemConfig.alpha}")
+        }
+
+        return optimalPolicy
     }
+
+
 }
 
 object OptimalPolicyFinder {
@@ -39,8 +49,6 @@ object OptimalPolicyFinder {
             stochasticPolicyConfig = optimalConfig
         )
     }
-
-    class EffectivePolicyNotExistsException : Exception()
 }
 
 class OffloadingSolver(
@@ -49,7 +57,7 @@ class OffloadingSolver(
     var equation4RowsCache: List<EquationRow>? = null
 
     fun findOptimalStochasticConfig(useEquationCache: Boolean = false): StochasticPolicyConfig {
-        val offloadingLPCreator: OffloadingLPCreator = OffloadingLPCreator(systemConfig)
+        val offloadingLPCreator = OffloadingLPCreator(systemConfig)
         lateinit var standardLinearProgram: StandardLinearProgram
 
         lateinit var offloadingLP: OffloadingLinearProgram
@@ -71,20 +79,68 @@ class OffloadingSolver(
                 }
             }
         }
+        // println("Creation Time : $creationTime ms")
         val indexMapping = offloadingLP.indexMapping
-        val solution: LPSolution = LPSolver.solve(standardLinearProgram)
+        lateinit var solution: LPSolution
+        val solveTime = measureTimeMillis {
+            solution = LPSolver.solve(standardLinearProgram)
+        }
+        if (solution.isAbnormal) {
+            throw IneffectivePolicyException("")
+        }
+        // println("Solve Time: $solveTime ms")
+        // println("solution = $solution")
 
         val policyConfig = createPolicyConfig(solution, indexMapping)
 
         return policyConfig
     }
 
+    private fun checkSolution(solution: LPSolution, indexMapping: OffloadingLPCreator.IndexMapping) {
+        val stateActionProbabilities: MutableMap<StateAction, Double> = solution.variableValues.mapIndexed { index, d ->
+            indexMapping.stateActionByCoefficientIndex[index]!! to d
+        }.toMap().toMutableMap()
+
+        val allStates = systemConfig.stateConfig.allStates()
+
+        for (state in allStates) {
+            for (action in systemConfig.allActions) {
+                val key = StateAction(state, action)
+                if (!stateActionProbabilities.containsKey(key)) {
+                    stateActionProbabilities[key] = 0.0
+                }
+            }
+        }
+
+        println("CHECKING")
+        stateActionProbabilities.keys.forEach {
+            if (stateActionProbabilities[it]!! > 0.0) {
+                println("P($it) = ${stateActionProbabilities[it]}")
+            }
+        }
+    }
+
+    fun getStateActionProbabilities(
+        solution: LPSolution,
+        indexMapping: OffloadingLPCreator.IndexMapping
+    ): Map<StateAction, Double> {
+        return solution.variableValues
+            .mapIndexed { index, d ->
+                indexMapping.stateActionByCoefficientIndex[index]!! to d
+            }
+            .toMap()
+    }
+
+    fun validateStateActionProbabilities(stateActionProbabilities: Map<StateAction, Double>) {
+
+    }
+
     fun createPolicyConfig(solution: LPSolution, indexMapping: OffloadingLPCreator.IndexMapping): StochasticPolicyConfig {
         // checks
-        val allStates = systemConfig.stateConfig.allStates()
-        val possibleActionProvider = UserEquipmentStateManager(systemConfig.stateConfig)
+        val possibleActionProvider = UserEquipmentStateManager(systemConfig.getStateManagerConfig())
+        val allPossibleStates = systemConfig.stateConfig.allStates().filter { possibleActionProvider.isStatePossible(it) }
         var expectedVariableCount = 0
-        for (state in allStates) {
+        for (state in allPossibleStates) {
             val possibleActions = possibleActionProvider.getPossibleActions(state)
             expectedVariableCount += possibleActions.size
         }
@@ -93,10 +149,7 @@ class OffloadingSolver(
 
         // create
         val stateProbabilities = mutableMapOf<UserEquipmentState, Double>()
-
-        val stateActionProbabilities: Map<StateAction, Double> = solution.variableValues.mapIndexed { index, d ->
-            indexMapping.stateActionByCoefficientIndex[index]!! to d
-        }.toMap()
+        val stateActionProbabilities: Map<StateAction, Double> = getStateActionProbabilities(solution, indexMapping)
 
         stateActionProbabilities.forEach { (key: StateAction, value: Double) ->
             if (stateProbabilities.containsKey(key.state)) {
@@ -106,16 +159,26 @@ class OffloadingSolver(
             }
         }
 
+        val queueFullProbability = stateActionProbabilities
+            .filter { it.key.state.taskQueueLength == systemConfig.taskQueueCapacity }
+            .values
+            .sum()
+
+        if (queueFullProbability > (1.0 / (2.0 * systemConfig.stateConfig.taskQueueCapacity))) {
+            throw IneffectivePolicyException("queueFullProbability = $queueFullProbability | eta = ${systemConfig.eta} | alpha = ${systemConfig.alpha}")
+        }
+
         val decisions: MutableMap<StateAction, Double> =
-            stateActionProbabilities.mapValues { (key: StateAction, value: Double) ->
-                if (stateProbabilities[key.state] == 0.0) {
+            stateActionProbabilities.mapValues { (key: StateAction, stateActionProbability: Double) ->
+                val stateProbability = stateProbabilities[key.state]!!
+                if (stateProbability == 0.0) {
                     0.0
                 } else {
-                    value / stateProbabilities[key.state]!!
+                    stateActionProbability / stateProbability
                 }
             }.toMutableMap()
 
-        for (state in allStates) {
+        for (state in allPossibleStates) {
             val possibleActions = possibleActionProvider.getPossibleActions(state)
             for (action in systemConfig.allActions) {
                 if (!possibleActions.contains(action)) {
@@ -125,7 +188,7 @@ class OffloadingSolver(
             }
         }
 
-        for (state in allStates) {
+        for (state in allPossibleStates) {
             for (action in systemConfig.allActions) {
                 check(decisions.contains(StateAction(state, action))) {
                     StateAction(state, action)
@@ -149,18 +212,8 @@ class OffloadingSolver(
         val decisionProbabilities: Map<StateAction, Double>,
         val stateProbabilities: Map<UserEquipmentState, Double>,
         val systemConfig: OffloadingSystemConfig
-    ) {
-
-        fun fullQueueProbability(): Double {
-            val probabilityQueueFull: Double = systemConfig.stateConfig.allStates()
-                .filter { it.taskQueueLength == systemConfig.taskQueueCapacity }
-                .sumOf { state -> stateProbabilities[state]!! }
-            return probabilityQueueFull
-        }
-    }
+    )
 }
 
-interface IndexToStateActionMapper {
-
-    fun mapToStateAction(index: Int, systemConfig: OffloadingSystemConfig): StateAction
-}
+class IneffectivePolicyException(message: String) : RuntimeException(message)
+class NoEffectivePolicyFoundException(message: String) : RuntimeException(message)

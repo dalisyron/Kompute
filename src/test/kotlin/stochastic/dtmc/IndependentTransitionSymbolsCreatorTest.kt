@@ -19,7 +19,7 @@ class IndependentTransitionCalculatorTest {
     fun getSimpleConfig(): OffloadingSystemConfig {
         val environmentParameters = EnvironmentParameters(
             nCloud = 1,
-            tRx = 0,
+            tRx = 0.0,
         )
         val userEquipmentConfig = UserEquipmentConfig(
             stateConfig = UserEquipmentStateConfig(
@@ -65,9 +65,9 @@ class IndependentTransitionCalculatorTest {
     @Test
     fun testcase1() {
         val systemConfig = getSimpleConfig()
-        val userEquipmentStateManager = UserEquipmentStateManager(systemConfig.stateConfig)
+        val userEquipmentStateManager = UserEquipmentStateManager(systemConfig.getStateManagerConfig())
         val symbolMapping = getSymbolMapping(systemConfig)
-        val discreteTimeMarkovChain: DiscreteTimeMarkovChain = DTMCCreator(systemConfig.stateConfig).create()
+        val discreteTimeMarkovChain: DiscreteTimeMarkovChain = DTMCCreator(systemConfig.getStateManagerConfig()).create()
         val transitionCalculator = IndependentTransitionCalculator(symbolMapping, discreteTimeMarkovChain)
 
         val itValue = transitionCalculator.getIndependentTransitionFraction(
@@ -93,8 +93,8 @@ class IndependentTransitionCalculatorTest {
         val systemConfig = getSimpleConfig().withUserEquipmentStateConfig(stateConfig)
         val symbolMapping = getSymbolMapping(systemConfig)
 
-        val userEquipmentStateManager = UserEquipmentStateManager(stateConfig)
-        val discreteTimeMarkovChain: DiscreteTimeMarkovChain = DTMCCreator(systemConfig.stateConfig).create()
+        val userEquipmentStateManager = UserEquipmentStateManager(systemConfig.getStateManagerConfig())
+        val discreteTimeMarkovChain: DiscreteTimeMarkovChain = DTMCCreator(systemConfig.getStateManagerConfig()).create()
         val itCalculator = IndependentTransitionCalculator(symbolMapping, discreteTimeMarkovChain)
 
         val itValue = itCalculator.getIndependentTransitionFraction(

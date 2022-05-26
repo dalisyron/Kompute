@@ -5,6 +5,7 @@ import com.google.ortools.glop.GlopParameters
 import com.google.ortools.linearsolver.MPConstraint
 import com.google.ortools.linearsolver.MPSolver
 import java.lang.IllegalArgumentException
+import java.util.Collections.max
 import kotlin.math.pow
 
 fun MPSolver.makeEqualityConstraint(rhs: Double, name: String): MPConstraint {
@@ -13,7 +14,8 @@ fun MPSolver.makeEqualityConstraint(rhs: Double, name: String): MPConstraint {
 
 data class LPSolution(
     val objectiveValue: Double,
-    val variableValues: List<Double>
+    val variableValues: List<Double>,
+    val isAbnormal: Boolean
 )
 
 object LPSolver {
@@ -24,7 +26,9 @@ object LPSolver {
 
     fun solve(lp: StandardLinearProgram, retryCounter: Int = 0): LPSolution {
         val rows = lp.rows.requireNoNulls()
-        check(rows.map { it.coefficients.size }.toSet().size == 1) // Check there is an equal number of variables for each row
+        check(rows.map { it.coefficients.size }
+            .toSet().size == 1) // Check there is an equal number of variables for each row
+        check(retryCounter in 0..2)
 
         val objectiveCount = rows.filter { it.type == EquationRow.Type.Objective }.size
         check(objectiveCount == 1) {
@@ -39,14 +43,16 @@ object LPSolver {
         val variableCount = rows[0].coefficients.size
 
         val solver = MPSolver.createSolver("GLOP")
-        when (retryCounter) {
-            0 -> {}
-            in (1..MAX_RETRIES) -> {
-                solver.setSolverSpecificParametersAsString(GlopParameters.newBuilder().setSolutionFeasibilityTolerance(10.0.pow(-6 + retryCounter)).build().toString())
-            }
-            else -> throw IllegalArgumentException()
-        }
 
+        if (retryCounter == 1) {
+            solver.setSolverSpecificParametersAsString(
+                GlopParameters.newBuilder().setUsePreprocessing(false).build().toString()
+            )
+        } else if (retryCounter == 2) {
+            solver.setSolverSpecificParametersAsString(
+                GlopParameters.newBuilder().setSolutionFeasibilityTolerance(1e-4).build().toString()
+            )
+        }
 
         checkNotNull(solver) {
             "Could not create solver SCIP"
@@ -89,25 +95,24 @@ object LPSolver {
 
         val resultStatus = solver.solve()
 
-        if (resultStatus != MPSolver.ResultStatus.OPTIMAL && retryCounter < MAX_RETRIES) {
-            println("Log: Result status was $resultStatus. Retrying with relaxed tolerance...")
-            return solve(lp, retryCounter + 1)
-        }
-
         if (resultStatus != MPSolver.ResultStatus.OPTIMAL) {
-            throw IllegalArgumentException("The given LP does not have an optimal solution | status = $resultStatus")
+            if (retryCounter <= 1) {
+                return solve(lp, retryCounter + 1)
+            } else {
+                return LPSolution(
+                    objectiveValue = Double.POSITIVE_INFINITY,
+                    variableValues = variables.map { it.solutionValue() },
+                    isAbnormal = true
+                )
+            }
         }
 
-        val obj = if (retryCounter == 0) {
-            solver.objective().value()
-        } else {
-            Double.POSITIVE_INFINITY
-        }
         return LPSolution(
-            objectiveValue = obj,
-            variableValues = variables.map { it.solutionValue() }
+            objectiveValue = solver.objective().value(),
+            variableValues = variables.map { it.solutionValue() },
+            isAbnormal = false
         )
     }
 
-    val MAX_RETRIES = 16
+    class AbnormalSolutionException : RuntimeException()
 }

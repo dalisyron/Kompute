@@ -1,7 +1,9 @@
 package simulation.ue
 
+import core.StateManagerConfig
 import core.policy.UserEquipmentExecutionState
 import core.UserEquipmentStateManager
+import core.ue.OffloadingSystemConfig
 import simulation.logger.Event
 import simulation.logger.Logger
 import policy.Action
@@ -13,9 +15,9 @@ import kotlin.random.Random
 
 class UserEquipment(
     private val timingInfoProvider: UserEquipmentTimingInfoProvider,
-    private val config: UserEquipmentConfig
+    private val config: OffloadingSystemConfig
 ) {
-    private val stateManager = UserEquipmentStateManager(config.stateConfig)
+    private val stateManager = UserEquipmentStateManager(config.getStateManagerConfig())
 
 
     var state: UserEquipmentState = UserEquipmentState(0, 0, 0)
@@ -52,7 +54,7 @@ class UserEquipment(
     }
 
     private fun executeAction(action: Action) {
-        if (getAverageConsumedPower() > config.componentsConfig.pMax) return // Exceeding UE's power limits (System not responding)
+        if (getAverageConsumedPower() > config.pMax) return // Exceeding UE's power limits (System not responding)
 
         isCpuActive = state.cpuState > 0
 
@@ -78,12 +80,12 @@ class UserEquipment(
         advanceCPUIfActive()
 
         val pTransmit = Random.nextDouble()
-        if (state.tuState > 0 && pTransmit < config.componentsConfig.beta)
+        if (state.tuState > 0 && pTransmit < config.beta)
             advanceTU()
 
         // 3. Add new task with probability alpha
         val rand = Random.nextDouble()
-        if (rand < config.componentsConfig.alpha)
+        if (rand < config.alpha)
             addTask()
     }
 

@@ -2,20 +2,36 @@ package core
 
 import com.google.common.truth.Truth
 import com.google.common.truth.Truth.assertThat
+import core.ue.OffloadingSystemConfig
+import core.ue.OffloadingSystemConfig.Companion.withUserEquipmentStateConfig
 import core.ue.UserEquipmentStateConfig
 import org.junit.Test
-import stochastic.dtmc.DTMCCreator
+import simulation.app.Mock
 import ue.UserEquipmentState
 
 class UserEquipmentStateManagerTests {
 
-    @Test
-    fun testGetEdges() {
-        val creator = UserEquipmentStateManager(
-            config = UserEquipmentStateConfig(
+    fun getSystemConfig(userEquipmentStateConfig: UserEquipmentStateConfig): OffloadingSystemConfig {
+        val systemConfig = Mock.configFromLiyu().withUserEquipmentStateConfig(
+            UserEquipmentStateConfig(
                 taskQueueCapacity = 1000, // set to some big number,
                 tuNumberOfPackets = 1,
                 cpuNumberOfSections = 17
+            )
+        )
+        return systemConfig
+    }
+
+    @Test
+    fun testGetEdges() {
+        val creator = UserEquipmentStateManager(
+            StateManagerConfig(
+                UserEquipmentStateConfig(
+                    taskQueueCapacity = 1000, // set to some big number,
+                    tuNumberOfPackets = 1,
+                    cpuNumberOfSections = 17
+                ),
+                StateManagerConfig.Limitation.None
             )
         )
 
@@ -39,10 +55,12 @@ class UserEquipmentStateManagerTests {
     @Test
     fun testGetEdges2() {
         val stateManager = UserEquipmentStateManager(
-            config = UserEquipmentStateConfig(
-                taskQueueCapacity = 5, // set to some big number,
-                tuNumberOfPackets = 5,
-                cpuNumberOfSections = 8
+            StateManagerConfig(
+                UserEquipmentStateConfig(
+                    taskQueueCapacity = 5, // set to some big number,
+                    tuNumberOfPackets = 5,
+                    cpuNumberOfSections = 8
+                )
             )
         )
 
@@ -66,10 +84,12 @@ class UserEquipmentStateManagerTests {
     @Test
     fun testGetEdges3() {
         val stateManager = UserEquipmentStateManager(
-            config = UserEquipmentStateConfig(
-                taskQueueCapacity = 4, // set to some big number,
-                tuNumberOfPackets = 5,
-                cpuNumberOfSections = 8
+            StateManagerConfig(
+                UserEquipmentStateConfig(
+                    taskQueueCapacity = 4, // set to some big number,
+                    tuNumberOfPackets = 5,
+                    cpuNumberOfSections = 8
+                )
             )
         )
 
@@ -91,10 +111,12 @@ class UserEquipmentStateManagerTests {
     @Test
     fun testGetEdges4() {
         val stateManager = UserEquipmentStateManager(
-            config = UserEquipmentStateConfig(
-                taskQueueCapacity = 10, // set to some big number,
-                tuNumberOfPackets = 5,
-                cpuNumberOfSections = 8
+            StateManagerConfig(
+                UserEquipmentStateConfig(
+                    taskQueueCapacity = 10, // set to some big number,
+                    tuNumberOfPackets = 5,
+                    cpuNumberOfSections = 8
+                )
             )
         )
 
@@ -122,10 +144,12 @@ class UserEquipmentStateManagerTests {
     @Test
     fun testGetEdges6() {
         val stateManager = UserEquipmentStateManager(
-            config = UserEquipmentStateConfig(
-                taskQueueCapacity = 10, // set to some big number,
-                tuNumberOfPackets = 5,
-                cpuNumberOfSections = 8
+            StateManagerConfig(
+                UserEquipmentStateConfig(
+                    taskQueueCapacity = 10, // set to some big number,
+                    tuNumberOfPackets = 5,
+                    cpuNumberOfSections = 8
+                )
             )
         )
 

@@ -17,7 +17,7 @@ import core.ue.OffloadingSystemConfig.Companion.withTaskQueueCapacity
 import stochastic.lp.RangedOptimalPolicyFinder
 
 fun main() {
-    val alphas: List<Double> = (30..44).map { (it * 0.5) / 100.0 }
+    val alphas: List<Double> = (40..44).map { (it * 0.5) / 100.0 }
 
     val baseConfig = Mock.configFromLiyu()
         .withPMax(2.5)

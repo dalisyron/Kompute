@@ -12,7 +12,7 @@ object Mock {
     fun configFromLiyu(): OffloadingSystemConfig {
         val environmentParameters = EnvironmentParameters(
             nCloud = 1,
-            tRx = 0,
+            tRx = 0.0,
         )
         val userEquipmentConfig = UserEquipmentConfig(
             stateConfig = UserEquipmentStateConfig(
