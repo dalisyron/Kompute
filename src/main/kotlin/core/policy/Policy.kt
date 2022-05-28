@@ -6,7 +6,8 @@ import ue.UserEquipmentState
 data class UserEquipmentExecutionState(
     val ueState: UserEquipmentState,
     val timeSlot: Int,
-    val totalConsumedPower: Double
+    val totalConsumedPower: Double,
+    val pMax: Double
 ) {
     fun averagePower(): Double = totalConsumedPower / timeSlot
     val taskQueueLength = ueState.taskQueueLength

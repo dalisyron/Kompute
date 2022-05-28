@@ -5,12 +5,18 @@ import core.ue.OffloadingSystemConfig
 import core.ue.OffloadingSystemConfig.Companion.withEta
 import core.ue.UserEquipmentStateConfig.Companion.allStates
 import core.UserEquipmentStateManager
+import policy.Action
 import ue.UserEquipmentState
 import kotlin.system.measureTimeMillis
 
 object RangedOptimalPolicyFinder {
 
-    fun findOptimalPolicy(baseSystemConfig: OffloadingSystemConfig, rangeStart: Double, rangeEnd: Double, precision: Int): StochasticOffloadingPolicy {
+    fun findOptimalPolicy(
+        baseSystemConfig: OffloadingSystemConfig,
+        rangeStart: Double,
+        rangeEnd: Double,
+        precision: Int
+    ): StochasticOffloadingPolicy {
 
         var optimalPolicy: StochasticOffloadingPolicy? = null
 
@@ -41,7 +47,10 @@ object RangedOptimalPolicyFinder {
 
 object OptimalPolicyFinder {
 
-    fun findOptimalPolicy(systemConfig: OffloadingSystemConfig, useEquationCache: Boolean = false): StochasticOffloadingPolicy {
+    fun findOptimalPolicy(
+        systemConfig: OffloadingSystemConfig,
+        useEquationCache: Boolean = false
+    ): StochasticOffloadingPolicy {
         val optimalConfig = OffloadingSolver(systemConfig).findOptimalStochasticConfig(useEquationCache)
 
         return StochasticOffloadingPolicy(
@@ -75,7 +84,8 @@ class OffloadingSolver(
                 offloadingLP = offloadingLPCreator.createOffloadingLinearProgram()
                 standardLinearProgram = offloadingLP.standardLinearProgram
                 if (equation4RowsCache == null) {
-                    equation4RowsCache = standardLinearProgram.rows.subList(3, 3 + systemConfig.stateCount()).requireNoNulls()
+                    equation4RowsCache =
+                        standardLinearProgram.rows.subList(3, 3 + systemConfig.stateCount()).requireNoNulls()
                 }
             }
         }
@@ -135,10 +145,14 @@ class OffloadingSolver(
 
     }
 
-    fun createPolicyConfig(solution: LPSolution, indexMapping: OffloadingLPCreator.IndexMapping): StochasticPolicyConfig {
+    fun createPolicyConfig(
+        solution: LPSolution,
+        indexMapping: OffloadingLPCreator.IndexMapping
+    ): StochasticPolicyConfig {
         // checks
         val possibleActionProvider = UserEquipmentStateManager(systemConfig.getStateManagerConfig())
-        val allPossibleStates = systemConfig.stateConfig.allStates().filter { possibleActionProvider.isStatePossible(it) }
+        val allPossibleStates =
+            systemConfig.stateConfig.allStates().filter { possibleActionProvider.isStatePossible(it) }
         var expectedVariableCount = 0
         for (state in allPossibleStates) {
             val possibleActions = possibleActionProvider.getPossibleActions(state)
@@ -160,13 +174,12 @@ class OffloadingSolver(
         }
 
         val queueFullProbability = stateActionProbabilities
-            .filter { it.key.state.taskQueueLength == systemConfig.taskQueueCapacity }
+            .filter {
+                it.key.state.taskQueueLength == systemConfig.taskQueueCapacity && it.key.action != Action.NoOperation
+            }
             .values
             .sum()
 
-        if (queueFullProbability > (1.0 / (2.0 * systemConfig.stateConfig.taskQueueCapacity))) {
-            throw IneffectivePolicyException("queueFullProbability = $queueFullProbability | eta = ${systemConfig.eta} | alpha = ${systemConfig.alpha}")
-        }
 
         val decisions: MutableMap<StateAction, Double> =
             stateActionProbabilities.mapValues { (key: StateAction, stateActionProbability: Double) ->
@@ -177,6 +190,10 @@ class OffloadingSolver(
                     stateActionProbability / stateProbability
                 }
             }.toMutableMap()
+
+        if (queueFullProbability > (1.0 / allPossibleStates.size)) {
+            throw IneffectivePolicyException("queueFullProbability = $queueFullProbability | eta = ${systemConfig.eta} | alpha = ${systemConfig.alpha} | averageDelay = ${solution.objectiveValue}")
+        }
 
         for (state in allPossibleStates) {
             val possibleActions = possibleActionProvider.getPossibleActions(state)
@@ -201,7 +218,8 @@ class OffloadingSolver(
             eta = systemConfig.eta,
             averageDelay = solution.objectiveValue,
             systemConfig = systemConfig,
-            stateProbabilities = stateProbabilities
+            stateProbabilities = stateProbabilities,
+            stateActionProbabilities = stateActionProbabilities
         )
 
     }
@@ -211,6 +229,7 @@ class OffloadingSolver(
         val averageDelay: Double,
         val decisionProbabilities: Map<StateAction, Double>,
         val stateProbabilities: Map<UserEquipmentState, Double>,
+        val stateActionProbabilities: Map<StateAction, Double>,
         val systemConfig: OffloadingSystemConfig
     )
 }

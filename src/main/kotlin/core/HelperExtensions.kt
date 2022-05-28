@@ -1,5 +1,6 @@
 package core
 
+import kotlin.random.Random
 import kotlin.system.measureTimeMillis
 
 fun <T> runRecordingMillis(label: String, block: () -> T): T {
@@ -18,4 +19,12 @@ fun mutableListOfZeros(size: Int): MutableList<Double> {
         result.add(0.0)
     }
     return result
+}
+
+fun withProbability(p: Double, block: () -> Unit) {
+    val rand = Random.nextDouble()
+
+    if (rand < p) {
+        block()
+    }
 }

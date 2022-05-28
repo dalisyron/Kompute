@@ -26,6 +26,18 @@ data class UserEquipmentStateConfig(
     val cpuNumberOfSections: Int,
 ) {
 
+    fun getFullStates(): List<UserEquipmentState> {
+        val states = mutableListOf<UserEquipmentState>()
+
+        for (j in 0..tuNumberOfPackets) {
+            for (k in 0 until cpuNumberOfSections) {
+                states.add(UserEquipmentState(taskQueueCapacity, j, k))
+            }
+        }
+
+        return states
+    }
+
     companion object {
         fun UserEquipmentStateConfig.allStates(): List<UserEquipmentState> {
             val states: MutableList<UserEquipmentState> = mutableListOf()

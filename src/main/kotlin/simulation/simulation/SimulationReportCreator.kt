@@ -7,7 +7,11 @@ class SimulationReportCreator(
     val systemConfig: OffloadingSystemConfig
 ) {
 
-    fun createReport(events: List<Event>): SimulationReport {
+    fun createReport(reportInfo: ReportInfo): SimulationReport {
+        val events = reportInfo.events
+        val totalConsumedPower = reportInfo.totalConsumedPower
+        val timeSlots = reportInfo.numberOfTimeSlots
+
         val eventsById = events.groupBy { event -> event.id }.filterValues {
                 list -> (list.any { it is Event.TaskProcessedByCPU } || list.any { it is Event.TaskTransmittedByTU })
         }
@@ -38,6 +42,15 @@ class SimulationReportCreator(
         // val averageTransmissionTime = transmissionTimes.average()
         // println("averageTransmissionTime = $averageTransmissionTime")
 
-        return SimulationReport(averageDelay)
+        return SimulationReport(
+            averageDelay = averageDelay,
+            averagePowerConsumption = totalConsumedPower / timeSlots
+        )
     }
+
+    data class ReportInfo(
+        val events: List<Event>,
+        val totalConsumedPower: Double,
+        val numberOfTimeSlots: Int
+    )
 }

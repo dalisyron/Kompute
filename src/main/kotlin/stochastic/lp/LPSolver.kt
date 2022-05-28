@@ -28,6 +28,7 @@ object LPSolver {
         val rows = lp.rows.requireNoNulls()
         check(rows.map { it.coefficients.size }
             .toSet().size == 1) // Check there is an equal number of variables for each row
+
         check(retryCounter in 0..2)
 
         val objectiveCount = rows.filter { it.type == EquationRow.Type.Objective }.size
@@ -49,6 +50,7 @@ object LPSolver {
                 GlopParameters.newBuilder().setUsePreprocessing(false).build().toString()
             )
         } else if (retryCounter == 2) {
+            println("Changing tolerance to 1e-4")
             solver.setSolverSpecificParametersAsString(
                 GlopParameters.newBuilder().setSolutionFeasibilityTolerance(1e-4).build().toString()
             )

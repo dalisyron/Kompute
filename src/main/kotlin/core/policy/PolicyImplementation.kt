@@ -5,6 +5,9 @@ import policy.Action
 object LocalOnlyPolicy : Policy {
 
     override fun getActionForState(state: UserEquipmentExecutionState): Action {
+        if (state.averagePower() > state.pMax) {
+            return Action.NoOperation
+        }
         if (state.cpuState == 0 && state.taskQueueLength > 0) {
             return Action.AddToCPU
         } else {
@@ -16,6 +19,9 @@ object LocalOnlyPolicy : Policy {
 object TransmitOnlyPolicy : Policy {
 
     override fun getActionForState(state: UserEquipmentExecutionState): Action {
+        if (state.averagePower() > state.pMax) {
+            return Action.NoOperation
+        }
         if (state.tuState == 0 && state.taskQueueLength > 0) {
             return Action.AddToTransmissionUnit
         } else {
@@ -27,6 +33,9 @@ object TransmitOnlyPolicy : Policy {
 object GreedyLocalFirstPolicy : Policy {
 
     override fun getActionForState(state: UserEquipmentExecutionState): Action {
+        if (state.averagePower() > state.pMax) {
+            return Action.NoOperation
+        }
         val canRunLocally = state.cpuState == 0
         val canTransmit = state.tuState == 0
 
@@ -45,6 +54,9 @@ object GreedyLocalFirstPolicy : Policy {
 object GreedyOffloadFirstPolicy : Policy {
 
     override fun getActionForState(state: UserEquipmentExecutionState): Action {
+        if (state.averagePower() > state.pMax) {
+            return Action.NoOperation
+        }
         val canRunLocally = state.cpuState == 0
         val canTransmit = state.tuState == 0
 

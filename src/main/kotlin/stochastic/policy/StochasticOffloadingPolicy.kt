@@ -23,15 +23,14 @@ data class StochasticOffloadingPolicy(
 
     override fun getActionForState(state: UserEquipmentExecutionState): Action {
         val actionProbabilities: List<Pair<Action, Double>> = systemConfig.allActions.map {
-            try {
-                it to stochasticPolicyConfig.decisionProbabilities[StateAction(state.ueState, it)]!!
-            } catch (e: java.lang.NullPointerException) {
-                println("${StateAction(state.ueState, it)} | ${systemConfig.stateConfig}")
-                exitProcess(1)
-            }
+            it to stochasticPolicyConfig.decisionProbabilities[StateAction(state.ueState, it)]!!
         }
-
-        return getActionFromProbabilityDistribution(actionProbabilities)
+        try {
+            val action = getActionFromProbabilityDistribution(actionProbabilities)
+            return action
+        } catch (e: java.lang.Exception) {
+            throw e
+        }
     }
 
     fun validate() {

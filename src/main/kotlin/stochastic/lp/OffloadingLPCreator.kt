@@ -168,7 +168,7 @@ class OffloadingLPCreator(
             coefficients[index] = coefficientValue
         }
 
-        return EquationRow(coefficients = coefficients, rhs = rhsEquation4)
+        return EquationRow(coefficients = coefficients, rhs = rhsEquation4, label = destState.toString())
     }
 
     private fun getEquation5(): EquationRow {
@@ -185,6 +185,27 @@ class OffloadingLPCreator(
         )
     }
 
+    private fun getEquations6(): List<EquationRow> {
+        val equations: MutableList<EquationRow> = mutableListOf()
+
+        systemConfig.stateConfig.getFullStates().filter { userEquipmentStateManager.isStatePossible(it) }.forEach {
+            val coefficients = mutableListOfZeros(indexMapping.variableCount)
+            val possibleActions = userEquipmentStateManager.getPossibleActions(it)
+            if (possibleActions.size > 1) {
+                val stateAction = StateAction(it, Action.NoOperation)
+                val index = indexMapping.coefficientIndexByStateAction[StateAction(it, Action.NoOperation)]!!
+                coefficients[index] = 1.0
+                equations.add(
+                    EquationRow(
+                        coefficients = coefficients,
+                        rhs = 0.0
+                    )
+                )
+            }
+        }
+        return equations
+    }
+
     private fun populatePossibleActions() {
         check(possibleActionsByState.isEmpty())
 
@@ -192,6 +213,10 @@ class OffloadingLPCreator(
             val actions = userEquipmentStateManager.getPossibleActions(state)
             possibleActionsByState[state] = actions
         }
+    }
+
+    fun equationMapping(equationRow: EquationRow): Map<StateAction, Double> {
+        return equationRow.coefficients.mapIndexed { index, d -> indexMapping.stateActionByCoefficientIndex[index]!! to d }.toMap()
     }
 
     fun createOffloadingLinearProgram(): OffloadingLinearProgram {
@@ -208,6 +233,7 @@ class OffloadingLPCreator(
             add(getEquation3())
             addAll(getEquations4())
             add(getEquation5())
+            // addAll(getEquations6())
         }
         val standardLinearProgram = StandardLinearProgram(equations)
 

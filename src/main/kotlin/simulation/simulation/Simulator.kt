@@ -25,15 +25,17 @@ class Simulator(
         runFor(numberOfTimeSlots) {
             val action = policy.getActionForState(userEquipment.getUserEquipmentExecutionState())
             val oldState = userEquipment.state
-            try {
-                userEquipment.tick(action)
-            } catch (e: Exception) {
-                exitProcess(1)
-            }
+            userEquipment.tick(action)
             val progress = clock.toDouble() / numberOfTimeSlots.toDouble()
         }
 
-        return simulationReportCreator.createReport(logger.events)
+        return simulationReportCreator.createReport(
+            SimulationReportCreator.ReportInfo(
+                events = logger.events,
+                totalConsumedPower = userEquipment.consumedPower,
+                numberOfTimeSlots = numberOfTimeSlots
+            )
+        )
     }
 
     private fun runFor(numberOfTimeSlots: Int, block: () -> Unit) {

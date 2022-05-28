@@ -1,13 +1,12 @@
 package simulation.ue
 
-import core.StateManagerConfig
 import core.policy.UserEquipmentExecutionState
 import core.UserEquipmentStateManager
 import core.ue.OffloadingSystemConfig
 import simulation.logger.Event
 import simulation.logger.Logger
 import policy.Action
-import core.ue.UserEquipmentConfig
+import core.withProbability
 import ue.UserEquipmentState
 import ue.UserEquipmentState.Companion.validate
 import ue.UserEquipmentTimingInfoProvider
@@ -32,7 +31,6 @@ class UserEquipment(
     var arrivedTaskCount: Int = 0
     var lastUsedId: Int = 0
     var droppedTasks: Int = 0
-    var isCpuActive = false
     var timeSlot: Int = 0
     var consumedPower: Double = 0.0
 
@@ -45,7 +43,8 @@ class UserEquipment(
         return UserEquipmentExecutionState(
             ueState = state,
             timeSlot = timeSlot,
-            totalConsumedPower = consumedPower
+            totalConsumedPower = consumedPower,
+            pMax = config.pMax
         )
     }
 
@@ -54,9 +53,6 @@ class UserEquipment(
     }
 
     private fun executeAction(action: Action) {
-        if (getAverageConsumedPower() > config.pMax) return // Exceeding UE's power limits (System not responding)
-
-        isCpuActive = state.cpuState > 0
 
         // 1. Apply action
         when (action) {
@@ -148,7 +144,6 @@ class UserEquipment(
         state = stateManager.addToCPUNextState(state)
 
         logger?.log(Event.TaskSentToCPU(cpuTaskId, timingInfoProvider.getCurrentTimeslot()))
-        isCpuActive = true
     }
 
     fun makeNewId(): Int {
