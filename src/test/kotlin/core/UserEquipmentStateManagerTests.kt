@@ -7,7 +7,7 @@ import core.ue.OffloadingSystemConfig.Companion.withUserEquipmentStateConfig
 import core.ue.UserEquipmentStateConfig
 import org.junit.Test
 import simulation.app.Mock
-import ue.UserEquipmentState
+import core.ue.UserEquipmentState
 
 class UserEquipmentStateManagerTests {
 

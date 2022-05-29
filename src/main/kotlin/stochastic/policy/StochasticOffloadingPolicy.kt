@@ -8,7 +8,7 @@ import core.ue.OffloadingSystemConfig
 import core.ue.UserEquipmentStateConfig.Companion.allStates
 import core.UserEquipmentStateManager
 import stochastic.lp.OffloadingSolver
-import ue.UserEquipmentState
+import core.ue.UserEquipmentState
 import java.lang.IllegalStateException
 import kotlin.math.abs
 import kotlin.random.Random

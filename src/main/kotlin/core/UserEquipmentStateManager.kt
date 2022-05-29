@@ -1,9 +1,9 @@
 package core
 
-import ue.UserEquipmentState
+import core.ue.UserEquipmentState
 import core.ue.UserEquipmentStateConfig
-import dtmc.symbol.ParameterSymbol
-import dtmc.symbol.Symbol
+import core.symbol.ParameterSymbol
+import core.symbol.Symbol
 import core.policy.Action
 import stochastic.dtmc.EdgeProvider
 import stochastic.dtmc.transition.Edge

@@ -7,11 +7,11 @@ import core.ue.OffloadingSystemConfig
 import core.ue.OffloadingSystemConfig.Companion.withUserEquipmentStateConfig
 import core.ue.UserEquipmentComponentsConfig
 import core.ue.UserEquipmentConfig
-import dtmc.symbol.ParameterSymbol
-import dtmc.symbol.Symbol
+import core.symbol.ParameterSymbol
+import core.symbol.Symbol
 import org.junit.Test
 import core.policy.Action
-import ue.UserEquipmentState
+import core.ue.UserEquipmentState
 import core.ue.UserEquipmentStateConfig
 
 class IndependentTransitionCalculatorTest {

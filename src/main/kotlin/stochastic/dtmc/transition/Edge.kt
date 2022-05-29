@@ -1,7 +1,7 @@
 package stochastic.dtmc.transition
 
-import dtmc.symbol.Symbol
-import ue.UserEquipmentState
+import core.symbol.Symbol
+import core.ue.UserEquipmentState
 
 data class Edge(
     val dest: UserEquipmentState,

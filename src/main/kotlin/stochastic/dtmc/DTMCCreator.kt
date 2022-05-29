@@ -2,7 +2,7 @@ package stochastic.dtmc
 
 import core.UserEquipmentStateManager
 import stochastic.dtmc.transition.Edge
-import ue.UserEquipmentState
+import core.ue.UserEquipmentState
 import core.ue.UserEquipmentStateConfig
 import core.ue.UserEquipmentStateConfig.Companion.allStates
 import core.StateManagerConfig

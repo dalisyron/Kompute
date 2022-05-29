@@ -1,6 +1,6 @@
 package core.policy
 
-import dtmc.symbol.Symbol
+import core.symbol.Symbol
 
 sealed class Action(val order: Int) : Symbol {
     object NoOperation : Action(0)

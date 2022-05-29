@@ -6,8 +6,8 @@ import core.ue.OffloadingSystemConfig
 import simulation.logger.Event
 import simulation.logger.Logger
 import core.policy.Action
-import ue.UserEquipmentState
-import ue.UserEquipmentState.Companion.validate
+import core.ue.UserEquipmentState
+import core.ue.UserEquipmentState.Companion.validate
 import ue.UserEquipmentTimingInfoProvider
 import kotlin.random.Random
 

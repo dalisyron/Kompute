@@ -1,4 +1,4 @@
-package ue
+package core.ue
 
 data class UserEquipmentState(
     val taskQueueLength: Int,

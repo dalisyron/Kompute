@@ -1,12 +1,12 @@
 package stochastic.lp
 
 import core.mutableListOfZeros
-import dtmc.symbol.ParameterSymbol
-import dtmc.symbol.Symbol
+import core.symbol.ParameterSymbol
+import core.symbol.Symbol
 import core.policy.Action
 import stochastic.dtmc.IndependentTransitionCalculator
 import core.ue.OffloadingSystemConfig
-import ue.UserEquipmentState
+import core.ue.UserEquipmentState
 import core.ue.UserEquipmentStateConfig.Companion.allStates
 import core.UserEquipmentStateManager
 import stochastic.dtmc.DTMCCreator

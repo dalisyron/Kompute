@@ -1,4 +1,4 @@
-package dtmc.symbol
+package core.symbol
 
 interface Symbol
 

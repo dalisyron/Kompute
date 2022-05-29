@@ -3,7 +3,6 @@ package core.ue
 import core.StateManagerConfig
 import core.environment.EnvironmentParameters
 import core.policy.Action
-import ue.UserEquipmentState
 import kotlin.math.pow
 
 data class UserEquipmentConfig(

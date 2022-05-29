@@ -5,11 +5,11 @@ import com.google.common.truth.Truth.assertWithMessage
 import core.StateManagerConfig
 import stochastic.dtmc.DTMCCreator
 import stochastic.dtmc.transition.Edge
-import dtmc.symbol.ParameterSymbol
-import dtmc.symbol.Symbol
+import core.symbol.ParameterSymbol
+import core.symbol.Symbol
 import org.junit.Test
 import core.policy.Action
-import ue.UserEquipmentState
+import core.ue.UserEquipmentState
 import core.ue.UserEquipmentStateConfig
 
 internal class DTMCCreatorTests {

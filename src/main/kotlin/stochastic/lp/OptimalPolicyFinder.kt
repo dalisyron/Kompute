@@ -6,7 +6,7 @@ import core.ue.OffloadingSystemConfig.Companion.withEta
 import core.ue.UserEquipmentStateConfig.Companion.allStates
 import core.UserEquipmentStateManager
 import core.policy.Action
-import ue.UserEquipmentState
+import core.ue.UserEquipmentState
 import kotlin.system.measureTimeMillis
 
 object RangedOptimalPolicyFinder {

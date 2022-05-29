@@ -1,6 +1,6 @@
 package core.policy
 
-import ue.UserEquipmentState
+import core.ue.UserEquipmentState
 
 data class UserEquipmentExecutionState(
     val ueState: UserEquipmentState,
