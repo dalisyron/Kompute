@@ -2,7 +2,7 @@ package core.ue
 
 import core.StateManagerConfig
 import core.environment.EnvironmentParameters
-import policy.Action
+import core.policy.Action
 import ue.UserEquipmentState
 import kotlin.math.pow
 

@@ -1,6 +1,5 @@
 package core.policy
 
-import policy.Action
 import ue.UserEquipmentState
 
 data class UserEquipmentExecutionState(

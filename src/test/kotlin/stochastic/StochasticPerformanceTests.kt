@@ -12,7 +12,7 @@ import core.ue.UserEquipmentConfig
 import core.ue.UserEquipmentStateConfig
 import org.junit.Test
 import org.junit.experimental.categories.Category
-import policy.Action
+import core.policy.Action
 import stochastic.lp.OptimalPolicyFinder
 import stochastic.lp.RangedOptimalPolicyFinder
 

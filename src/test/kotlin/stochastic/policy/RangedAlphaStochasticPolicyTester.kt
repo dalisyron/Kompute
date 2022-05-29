@@ -27,7 +27,7 @@ class RangedAlphaStochasticPolicyTester(
         check(alphaEnd > 0.0 && alphaEnd <= 1.0)
     }
 
-    fun runTest() {
+    fun run() {
         check(alphaSampleCount >= 1)
 
         val alphas = if (alphaSampleCount == 1) {

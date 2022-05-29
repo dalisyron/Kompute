@@ -7,7 +7,7 @@ import core.policy.GreedyLocalFirstPolicy
 import core.policy.LocalOnlyPolicy
 import core.policy.TransmitOnlyPolicy
 import org.junit.Test
-import policy.Action
+import core.policy.Action
 import simulation.simulation.Simulator
 import stochastic.lp.OptimalPolicyFinder
 import core.ue.OffloadingSystemConfig
@@ -192,7 +192,7 @@ class StochasticPolicyTest {
             assertionsEnabled = true
         )
 
-        tester.runTest()
+        tester.run()
     }
 
     @Test
@@ -212,7 +212,7 @@ class StochasticPolicyTest {
             assertionsEnabled = true
         )
 
-        tester.runTest()
+        tester.run()
     }
 
     @Test
@@ -232,7 +232,7 @@ class StochasticPolicyTest {
             assertionsEnabled = true
         )
 
-        tester.runTest()
+        tester.run()
     }
 
     fun testRangedPlot1() {
@@ -251,7 +251,7 @@ class StochasticPolicyTest {
             assertionsEnabled = true
         )
 
-        tester.runTest()
+        tester.run()
     }
 
     @Test
@@ -272,7 +272,7 @@ class StochasticPolicyTest {
             assertionsEnabled = true
         )
 
-        tester.runTest()
+        tester.run()
     }
 
     @Test
@@ -294,7 +294,7 @@ class StochasticPolicyTest {
             assertionsEnabled = true
         )
 
-        tester.runTest()
+        tester.run()
     }
 
     @Test
@@ -317,7 +317,7 @@ class StochasticPolicyTest {
             assertionsEnabled = true
         )
 
-        tester.runTest()
+        tester.run()
     }
 
     @Test
@@ -403,7 +403,38 @@ class StochasticPolicyTest {
             assertionsEnabled = false
         )
 
-        tester.runTest()
+        tester.run()
     }
 
+    @Test
+    fun testSampleFromLiyuUnlimitedPower() {
+        val tester = RangedAlphaStochasticPolicyTester(
+            baseSystemConfig = Mock.configFromLiyu().withTaskQueueCapacity(20).withPMax(30.0),
+            alphaStart = 0.01,
+            alphaEnd = 0.40,
+            alphaSampleCount = 40,
+            precision = 200,
+            simulationTicks = 1_000_000 ,
+            plotEnabled = true,
+            assertionsEnabled = true
+        )
+
+        tester.run()
+    }
+
+    @Test
+    fun testSampleFromLiyuLimitedPower() {
+        val tester = RangedAlphaStochasticPolicyTester(
+            baseSystemConfig = Mock.configFromLiyu().withTaskQueueCapacity(20).withPMax(1.2),
+            alphaStart = 0.01,
+            alphaEnd = 0.40,
+            alphaSampleCount = 80,
+            precision = 200,
+            simulationTicks = 4_000_000 ,
+            plotEnabled = true,
+            assertionsEnabled = true
+        )
+
+        tester.run()
+    }
 }

@@ -3,7 +3,7 @@ package stochastic.lp
 import core.mutableListOfZeros
 import dtmc.symbol.ParameterSymbol
 import dtmc.symbol.Symbol
-import policy.Action
+import core.policy.Action
 import stochastic.dtmc.IndependentTransitionCalculator
 import core.ue.OffloadingSystemConfig
 import ue.UserEquipmentState

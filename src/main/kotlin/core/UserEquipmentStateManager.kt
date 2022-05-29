@@ -4,12 +4,11 @@ import ue.UserEquipmentState
 import core.ue.UserEquipmentStateConfig
 import dtmc.symbol.ParameterSymbol
 import dtmc.symbol.Symbol
-import policy.Action
+import core.policy.Action
 import stochastic.dtmc.EdgeProvider
 import stochastic.dtmc.transition.Edge
 import stochastic.dtmc.transition.Transition
 import stochastic.dtmc.transition.toEdge
-import ue.UserEquipmentState.Companion.validate
 
 data class StateManagerConfig(
     val userEquipmentStateConfig: UserEquipmentStateConfig,

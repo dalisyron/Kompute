@@ -1,7 +1,7 @@
 package stochastic.app
 
 import core.environment.EnvironmentParameters
-import policy.Action
+import core.policy.Action
 import stochastic.lp.StateAction
 import stochastic.policy.StochasticOffloadingPolicy
 import core.ue.OffloadingSystemConfig

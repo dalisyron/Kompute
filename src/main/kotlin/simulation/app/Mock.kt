@@ -1,7 +1,7 @@
 package simulation.app
 
 import core.environment.EnvironmentParameters
-import policy.Action
+import core.policy.Action
 import core.ue.OffloadingSystemConfig
 import core.ue.UserEquipmentComponentsConfig
 import core.ue.UserEquipmentConfig
@@ -16,17 +16,17 @@ object Mock {
         )
         val userEquipmentConfig = UserEquipmentConfig(
             stateConfig = UserEquipmentStateConfig(
-                taskQueueCapacity = 13, // set to some big number,
+                taskQueueCapacity = 20, // set to some big number,
                 tuNumberOfPackets = 1,
-                cpuNumberOfSections = 14
+                cpuNumberOfSections = 17
             ),
             componentsConfig = UserEquipmentComponentsConfig(
                 alpha = 0.4,
-                beta = 0.5,
+                beta = 0.4,
                 eta = 0.0, // Not used in the baseline policies, set to whatever
-                pTx = 1.4,
-                pLocal = 0.3,
-                pMax = 1.6
+                pTx = 1.0,
+                pLocal = 0.8,
+                pMax = 20.0
             )
         )
 

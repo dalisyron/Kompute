@@ -8,7 +8,7 @@ import stochastic.dtmc.transition.Edge
 import dtmc.symbol.ParameterSymbol
 import dtmc.symbol.Symbol
 import org.junit.Test
-import policy.Action
+import core.policy.Action
 import ue.UserEquipmentState
 import core.ue.UserEquipmentStateConfig
 

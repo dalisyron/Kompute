@@ -1,7 +1,5 @@
 package core.policy
 
-import policy.Action
-
 object LocalOnlyPolicy : Policy {
 
     override fun getActionForState(state: UserEquipmentExecutionState): Action {

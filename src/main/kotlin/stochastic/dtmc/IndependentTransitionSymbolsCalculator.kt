@@ -1,9 +1,8 @@
 package stochastic.dtmc
 
 import dtmc.symbol.Symbol
-import policy.Action
+import core.policy.Action
 import ue.UserEquipmentState
-import core.ue.UserEquipmentStateConfig
 import stochastic.dtmc.transition.Edge
 
 // Calculates the following:

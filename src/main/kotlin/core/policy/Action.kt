@@ -1,4 +1,4 @@
-package policy
+package core.policy
 
 import dtmc.symbol.Symbol
 

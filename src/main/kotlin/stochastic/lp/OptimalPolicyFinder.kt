@@ -5,7 +5,7 @@ import core.ue.OffloadingSystemConfig
 import core.ue.OffloadingSystemConfig.Companion.withEta
 import core.ue.UserEquipmentStateConfig.Companion.allStates
 import core.UserEquipmentStateManager
-import policy.Action
+import core.policy.Action
 import ue.UserEquipmentState
 import kotlin.system.measureTimeMillis
 

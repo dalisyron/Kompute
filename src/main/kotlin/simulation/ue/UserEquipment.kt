@@ -5,8 +5,7 @@ import core.UserEquipmentStateManager
 import core.ue.OffloadingSystemConfig
 import simulation.logger.Event
 import simulation.logger.Logger
-import policy.Action
-import core.withProbability
+import core.policy.Action
 import ue.UserEquipmentState
 import ue.UserEquipmentState.Companion.validate
 import ue.UserEquipmentTimingInfoProvider
