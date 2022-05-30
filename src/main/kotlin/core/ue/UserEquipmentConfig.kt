@@ -1,6 +1,7 @@
 package core.ue
 
 import core.StateManagerConfig
+import core.TupleGenerator
 import core.environment.EnvironmentParameters
 import core.policy.Action
 import kotlin.math.pow
@@ -10,44 +11,39 @@ data class UserEquipmentConfig(
     val componentsConfig: UserEquipmentComponentsConfig
 ) {
     val taskQueueCapacity: Int = stateConfig.taskQueueCapacity
-    val tuNumberOfPackets: Int = stateConfig.tuNumberOfPackets
-    val cpuNumberOfSections: Int = stateConfig.cpuNumberOfSections
+    val tuNumberOfPackets: List<Int> = stateConfig.tuNumberOfPackets
+    val cpuNumberOfSections: List<Int> = stateConfig.cpuNumberOfSections
     val beta: Double = componentsConfig.beta
-    val alpha: Double = componentsConfig.alpha
-    val eta: Double = componentsConfig.eta
+    val alpha: List<Double> = componentsConfig.alpha
+    val eta: List<Double> = componentsConfig.eta
     val pTx: Double = componentsConfig.pTx
     val pLoc: Double = componentsConfig.pLocal
+    val numberOfQueues: Int = stateConfig.numberOfQueues
 }
 
 data class UserEquipmentStateConfig(
     val taskQueueCapacity: Int,
-    val tuNumberOfPackets: Int,
-    val cpuNumberOfSections: Int,
+    val tuNumberOfPackets: List<Int>,
+    val cpuNumberOfSections: List<Int>,
+    val numberOfQueues: Int
 ) {
-
-    fun getFullStates(): List<UserEquipmentState> {
-        val states = mutableListOf<UserEquipmentState>()
-
-        for (j in 0..tuNumberOfPackets) {
-            for (k in 0 until cpuNumberOfSections) {
-                states.add(UserEquipmentState(taskQueueCapacity, j, k))
-            }
-        }
-
-        return states
-    }
 
     companion object {
         fun UserEquipmentStateConfig.allStates(): List<UserEquipmentState> {
-            val states: MutableList<UserEquipmentState> = mutableListOf()
+            val dimensions = (1..numberOfQueues).map { taskQueueCapacity + 1 } + (tuNumberOfPackets + 1) + (cpuNumberOfSections) + (numberOfQueues + 1) + (numberOfQueues + 1)
+            val states: List<UserEquipmentState> = TupleGenerator.generateTuples(dimensions).map { tuple ->
+                val cpuTaskTypeQueueIndex: Int? = tuple[tuple.size - 1].takeIf { it != numberOfQueues}
+                val tuTaskTypeQueueIndex: Int? = tuple[tuple.size - 2].takeIf { it != numberOfQueues}
 
-            for (i in 0..taskQueueCapacity) {
-                for (j in 0..tuNumberOfPackets) {
-                    for (k in 0 until cpuNumberOfSections) {
-                        states.add(UserEquipmentState(i, j, k))
-                    }
-                }
+                UserEquipmentState(
+                    taskQueueLengths = tuple.subList(0, numberOfQueues),
+                    tuState = numberOfQueues,
+                    cpuState = numberOfQueues,
+                    tuTaskTypeQueueIndex = tuTaskTypeQueueIndex,
+                    cpuTaskTypeQueueIndex = cpuTaskTypeQueueIndex
+                )
             }
+
             return states
         }
     }
@@ -55,8 +51,8 @@ data class UserEquipmentStateConfig(
 
 data class UserEquipmentComponentsConfig(
     val beta: Double,
-    val alpha: Double,
-    val eta: Double,
+    val alpha: List<Double>,
+    val eta: List<Double>,
     val pTx: Double,
     val pLocal: Double,
     val pMax: Double
@@ -67,45 +63,60 @@ data class OffloadingSystemConfig(
     val environmentParameters: EnvironmentParameters,
     val allActions: Set<Action>
 ) {
-    val actionCount: Int = allActions.size
     val taskQueueCapacity: Int = userEquipmentConfig.stateConfig.taskQueueCapacity
-    val tuNumberOfPackets: Int = userEquipmentConfig.stateConfig.tuNumberOfPackets
-    val cpuNumberOfSections: Int = userEquipmentConfig.stateConfig.cpuNumberOfSections
+    val tuNumberOfPackets: List<Int> = userEquipmentConfig.stateConfig.tuNumberOfPackets
+    val cpuNumberOfSections: List<Int> = userEquipmentConfig.stateConfig.cpuNumberOfSections
     val beta: Double = userEquipmentConfig.componentsConfig.beta
-    val alpha: Double = userEquipmentConfig.componentsConfig.alpha
-    val eta: Double = userEquipmentConfig.componentsConfig.eta
+    val alpha: List<Double> = userEquipmentConfig.componentsConfig.alpha
+    val eta: List<Double> = userEquipmentConfig.componentsConfig.eta
     val pTx: Double = userEquipmentConfig.componentsConfig.pTx
     val pLoc: Double = userEquipmentConfig.componentsConfig.pLocal
     val nCloud: Int = environmentParameters.nCloud
     val tRx: Double = environmentParameters.tRx
     val pMax: Double = userEquipmentConfig.componentsConfig.pMax
-    val tTx: Double by lazy {
-        var expectedSingleDelay = 0.0
-        val beta = beta
-        val numberOfPackets = tuNumberOfPackets
-        for (j in 1..1000) { // in theory, infinity is used instead of 1000. But 1000 is precise enough for practice
-            expectedSingleDelay += j * (1.0 - beta).pow(j - 1) * beta
-        }
-        return@lazy numberOfPackets * expectedSingleDelay
+    val numberOfQueues: Int = userEquipmentConfig.numberOfQueues
+
+    val tTx: List<Double> by lazy {
+        getTx()
     }
 
-    fun expectedTCloud(): Double {
-        return tRx + nCloud + tTx
+    fun getTx(): List<Double> {
+        return (0 until userEquipmentConfig.numberOfQueues).map { index ->
+            var expectedSingleDelay = 0.0
+            val beta = beta
+            val numberOfPackets = tuNumberOfPackets[index]
+            for (j in 1..1000) { // in theory, infinity is used instead of 1000. But 1000 is precise enough for practice
+                expectedSingleDelay += j * (1.0 - beta).pow(j - 1) * beta
+            }
+            return@map numberOfPackets * expectedSingleDelay
+        }
+    }
+
+    fun expectedTCloud(queueIndex: Int): Double {
+        return tRx + nCloud + tTx[queueIndex]
     }
 
     fun stateCount(): Int {
-        return (taskQueueCapacity + 1) * (tuNumberOfPackets + 1) * (cpuNumberOfSections)
+        var product = 1
+        val dimensions = (1..numberOfQueues).map { taskQueueCapacity + 1 } + (tuNumberOfPackets + 1) + (cpuNumberOfSections) + (numberOfQueues + 1) + (numberOfQueues + 1)
+
+        for (d in dimensions) {
+            product *= d
+        }
+        return product
     }
 
     val stateConfig = userEquipmentConfig.stateConfig
 
-    fun getLimitation(): StateManagerConfig.Limitation {
-        if (eta == 1.0) {
-            return StateManagerConfig.Limitation.LocalOnly
-        } else if (eta == 0.0) {
-            return StateManagerConfig.Limitation.OffloadOnly
-        } else {
-            return StateManagerConfig.Limitation.None
+    fun getLimitation(): List<StateManagerConfig.Limitation> {
+        return userEquipmentConfig.eta.map { eta ->
+            if (eta == 1.0) {
+                StateManagerConfig.Limitation.LocalOnly
+            } else if (eta == 0.0) {
+                StateManagerConfig.Limitation.OffloadOnly
+            } else {
+                StateManagerConfig.Limitation.None
+            }
         }
     }
 
@@ -117,7 +128,7 @@ data class OffloadingSystemConfig(
     }
 
     companion object {
-        fun OffloadingSystemConfig.withAlpha(alpha: Double): OffloadingSystemConfig {
+        fun OffloadingSystemConfig.withAlpha(alpha: List<Double>): OffloadingSystemConfig {
             return this.copy(
                 userEquipmentConfig = userEquipmentConfig.copy(
                     componentsConfig = userEquipmentConfig.componentsConfig.copy(
@@ -137,7 +148,7 @@ data class OffloadingSystemConfig(
             )
         }
 
-        fun OffloadingSystemConfig.withEta(eta: Double): OffloadingSystemConfig {
+        fun OffloadingSystemConfig.withEta(eta: List<Double>): OffloadingSystemConfig {
             return this.copy(
                 userEquipmentConfig = userEquipmentConfig.copy(
                     componentsConfig = userEquipmentConfig.componentsConfig.copy(
@@ -157,7 +168,7 @@ data class OffloadingSystemConfig(
             )
         }
 
-        fun OffloadingSystemConfig.withNumberOfSections(cpuNumberOfSections: Int): OffloadingSystemConfig {
+        fun OffloadingSystemConfig.withNumberOfSections(cpuNumberOfSections: List<Int>): OffloadingSystemConfig {
             return this.copy(
                 userEquipmentConfig = userEquipmentConfig.copy(
                     stateConfig = userEquipmentConfig.stateConfig.copy(
@@ -168,7 +179,7 @@ data class OffloadingSystemConfig(
         }
 
 
-        fun OffloadingSystemConfig.withNumberOfPackets(tuNumberOfPackets: Int): OffloadingSystemConfig {
+        fun OffloadingSystemConfig.withNumberOfPackets(tuNumberOfPackets: List<Int>): OffloadingSystemConfig {
             return this.copy(
                 userEquipmentConfig = userEquipmentConfig.copy(
                     stateConfig = userEquipmentConfig.stateConfig.copy(

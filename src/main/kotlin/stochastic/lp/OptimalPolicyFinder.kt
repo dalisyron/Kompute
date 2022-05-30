@@ -76,8 +76,8 @@ class OffloadingSolver(
                 offloadingLP = offloadingLPCreator.createOffloadingLinearProgramExcludingEquation4()
                 val rows = offloadingLP.standardLinearProgram.rows.toMutableList()
                 for (i in 0..systemConfig.stateCount()) {
-                    check(rows[3 + i] == null)
-                    rows[3 + i] = equation4RowsCache!![i]
+                    check(rows[3 + i + systemConfig.numberOfQueues] == null)
+                    rows[3 + i + systemConfig.numberOfQueues] = equation4RowsCache!![i]
                 }
                 standardLinearProgram = StandardLinearProgram(rows)
             } else {
@@ -85,7 +85,7 @@ class OffloadingSolver(
                 standardLinearProgram = offloadingLP.standardLinearProgram
                 if (equation4RowsCache == null) {
                     equation4RowsCache =
-                        standardLinearProgram.rows.subList(3, 3 + systemConfig.stateCount()).requireNoNulls()
+                        standardLinearProgram.rows.subList(3 + systemConfig.numberOfQueues, 3 + + systemConfig.numberOfQueues + systemConfig.stateCount()).requireNoNulls()
                 }
             }
         }
@@ -175,7 +175,7 @@ class OffloadingSolver(
 
         val queueFullProbability = stateActionProbabilities
             .filter {
-                it.key.state.taskQueueLength == systemConfig.taskQueueCapacity && it.key.action != Action.NoOperation
+                it.key.state.taskQueueLengths == systemConfig.taskQueueCapacity && it.key.action != Action.NoOperation
             }
             .values
             .sum()

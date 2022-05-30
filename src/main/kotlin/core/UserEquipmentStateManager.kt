@@ -3,17 +3,19 @@ package core
 import core.ue.UserEquipmentState
 import core.ue.UserEquipmentStateConfig
 import core.symbol.ParameterSymbol
-import core.symbol.Symbol
 import core.policy.Action
 import stochastic.dtmc.EdgeProvider
 import stochastic.dtmc.transition.Edge
 import stochastic.dtmc.transition.Transition
 import stochastic.dtmc.transition.toEdge
+import java.lang.Integer.max
 
 data class StateManagerConfig(
     val userEquipmentStateConfig: UserEquipmentStateConfig,
-    val limitation: Limitation = Limitation.None
+    val limitation: List<Limitation> = Limitation.None
 ) {
+
+    val numberOfQueues: Int = userEquipmentStateConfig.numberOfQueues
 
     enum class Limitation {
         None, LocalOnly, OffloadOnly
@@ -23,87 +25,139 @@ data class StateManagerConfig(
 class UserEquipmentStateManager(private val config: StateManagerConfig) : PossibleActionProvider, EdgeProvider {
     private val userEquipmentStateConfig = config.userEquipmentStateConfig
 
-    fun addTaskNextState(state: UserEquipmentState): UserEquipmentState {
-        // TODO test this
-        if (state.taskQueueLength == userEquipmentStateConfig.taskQueueCapacity) {
-            throw TaskQueueFullException()
+    fun getNextStateRunningAction(sourceState: UserEquipmentState, action: Action): UserEquipmentState {
+        when (action) {
+            is Action.NoOperation -> {
+                return sourceState
+            }
+            is Action.AddToCPU -> {
+                return getNextStateAddingToCPU(sourceState, action.queueIndex)
+            }
+            is Action.AddToTransmissionUnit -> {
+                return getNextStateAddingToTU(sourceState, action.queueIndex)
+            }
+            is Action.AddToBothUnits -> {
+                return getNextStateAddingToBothUnits(
+                    sourceState,
+                    action.cpuTaskQueueIndex,
+                    action.transmissionUnitTaskQueueIndex
+                )
+            }
         }
-        require(state.taskQueueLength in 0 until userEquipmentStateConfig.taskQueueCapacity)
+    }
 
-        return state.copy(
-            taskQueueLength = state.taskQueueLength + 1
+
+    fun getNextStateAddingToBothUnits(
+        sourceState: UserEquipmentState,
+        cpuQueueIndex: Int,
+        transmissionUnitTaskQueueIndex: Int
+    ): UserEquipmentState {
+        return getNextStateAddingToCPU(
+            getNextStateAddingToTU(sourceState, transmissionUnitTaskQueueIndex),
+            cpuQueueIndex
         )
     }
 
-    fun advanceCPUNextState(state: UserEquipmentState): UserEquipmentState {
-        check(state.cpuState >= 0)
-        val nextCpuState: Int = if (state.cpuState == userEquipmentStateConfig.cpuNumberOfSections - 1) 0 else state.cpuState + 1
+    fun getNextStateAddingToCPU(sourceState: UserEquipmentState, queueIndex: Int): UserEquipmentState {
+        check(sourceState.cpuState == 0)
+        check(sourceState.taskQueueLengths[queueIndex] > 0)
 
-        return state.copy(
-            cpuState = nextCpuState
-        )
-    }
-
-    fun advanceTUNextState(state: UserEquipmentState): UserEquipmentState {
-        check(state.tuState > 0)
-        val nextTuState: Int = if (state.tuState == userEquipmentStateConfig.tuNumberOfPackets) 0 else state.tuState + 1
-        return state.copy(
-            tuState = nextTuState
-        )
-    }
-
-    fun addToTransmissionUnitNextState(state: UserEquipmentState): UserEquipmentState {
-        check(state.tuState == 0)
-
-        return state.copy(
-            taskQueueLength = state.taskQueueLength - 1,
-            tuState = 1
-        )
-    }
-
-    fun addToCPUNextState(state: UserEquipmentState): UserEquipmentState {
-        check(state.cpuState == 0)
-
-        return state.copy(
-            taskQueueLength = state.taskQueueLength - 1,
+        return sourceState.copy(
+            taskQueueLengths = sourceState.taskQueueLengths.decrementedAt(queueIndex),
             cpuState = -1
         )
     }
 
-    fun advanceCPUIfActiveNextState(state: UserEquipmentState): UserEquipmentState {
-        return if (state.cpuState > 0) {
-            advanceCPUNextState(state)
-        } else if (state.cpuState == -1) {
-            state.copy(
-                cpuState = 1
+    fun getNextStateAddingToTU(sourceState: UserEquipmentState, queueIndex: Int): UserEquipmentState {
+        check(sourceState.tuState == 0)
+        check(sourceState.taskQueueLengths[queueIndex] > 0)
+
+        return sourceState.copy(
+            taskQueueLengths = sourceState.taskQueueLengths.decrementedAt(queueIndex),
+            tuState = 1
+        )
+    }
+
+    fun getNextStateAddingTaskToQueue(sourceState: UserEquipmentState, queueIndex: Int): UserEquipmentState {
+        if (sourceState.taskQueueLengths[queueIndex] == userEquipmentStateConfig.taskQueueCapacity) {
+            throw TaskQueueFullException()
+        }
+        require(sourceState.taskQueueLengths[queueIndex] in 0 until userEquipmentStateConfig.taskQueueCapacity)
+
+        return sourceState.copy(
+            taskQueueLengths = sourceState.taskQueueLengths.incrementedAt(queueIndex)
+        )
+    }
+
+    fun getNextStateAdvancingCPU(sourceState: UserEquipmentState): UserEquipmentState {
+        check(sourceState.cpuState > 0 || sourceState.cpuState == -1)
+        val numberOfSections = userEquipmentStateConfig.cpuNumberOfSections[sourceState.cpuTaskTypeQueueIndex!!]
+
+        if (sourceState.cpuState == numberOfSections - 1 || (sourceState.cpuState == -1 && numberOfSections == 1)) {
+            return sourceState.copy(
+                cpuState = 0,
+                cpuTaskTypeQueueIndex = null
             )
-        } else if (state.cpuState == 0) {
-            state
         } else {
-            throw IllegalStateException()
+            return sourceState.copy(
+                cpuState = max(sourceState.cpuState + 1, 1)
+            )
+        }
+    }
+
+    fun getNextStateAdvancingTU(sourceState: UserEquipmentState): UserEquipmentState {
+        check(sourceState.tuState > 0)
+        val numberOfPackets = userEquipmentStateConfig.tuNumberOfPackets[sourceState.tuTaskTypeQueueIndex!!]
+
+        if (sourceState.tuState == numberOfPackets - 1) {
+            return sourceState.copy(
+                tuState = 0,
+                tuTaskTypeQueueIndex = null
+            )
+        } else {
+            return sourceState.copy(
+                tuState = sourceState.tuState + 1
+            )
         }
     }
 
     override fun getPossibleActions(state: UserEquipmentState): List<Action> {
-        val (taskQueueLength, tuState, cpuState) = state
+        val result = mutableListOf<Action>(Action.NoOperation)
 
-        val res = mutableListOf<Action>(Action.NoOperation)
+        if (state.isCPUActive() && state.isTUActive()) {
+            return result
+        }
 
-        if (taskQueueLength >= 1) {
-            if (tuState == 0 && config.limitation != StateManagerConfig.Limitation.LocalOnly) {
-                res.add(Action.AddToTransmissionUnit)
-            }
-            if (cpuState == 0 && config.limitation != StateManagerConfig.Limitation.OffloadOnly) {
-                res.add(Action.AddToCPU)
+        val nonEmptyQueueIndices = state.taskQueueLengths.indices.filter { state.taskQueueLengths[it] > 0 }
+
+        if (!state.isCPUActive()) {
+            for (queueIndex in nonEmptyQueueIndices) {
+                result.add(Action.AddToCPU(queueIndex))
             }
         }
 
-        if (taskQueueLength >= 2) {
-            if (tuState == 0 && cpuState == 0 && config.limitation == StateManagerConfig.Limitation.None)
-                res.add(Action.AddToBothUnits)
+        if (!state.isTUActive()) {
+            for (queueIndex in nonEmptyQueueIndices) {
+                result.add(Action.AddToCPU(queueIndex))
+            }
         }
 
-        return res.sortedBy { it.order }
+        if (!state.isTUActive() && !state.isCPUActive()) {
+            for (i in nonEmptyQueueIndices) {
+                for (j in nonEmptyQueueIndices) {
+                    if (i == j && state.taskQueueLengths[i] < 2) continue
+
+                    result.add(
+                        Action.AddToBothUnits(
+                            cpuTaskQueueIndex = i,
+                            transmissionUnitTaskQueueIndex = j
+                        )
+                    )
+                }
+            }
+        }
+
+        return result
     }
 
     fun getEdgesForState(state: UserEquipmentState): List<Edge> {
@@ -129,85 +183,110 @@ class UserEquipmentStateManager(private val config: StateManagerConfig) : Possib
         return uniqueEdges
     }
 
-    private fun getTransitionsForAction(state: UserEquipmentState, action: Action): List<Transition> {
-
-        when (action) {
-            Action.NoOperation -> {
-                state
+    private fun checkStateAgainstLimitations(state: UserEquipmentState) {
+        when (config.limitation) {
+            StateManagerConfig.Limitation.LocalOnly -> {
+                check(!state.isTUActive())
             }
-            Action.AddToCPU -> {
-                addToCPUNextState(state)
+            StateManagerConfig.Limitation.OffloadOnly -> {
+                check(!state.isCPUActive())
             }
-            Action.AddToTransmissionUnit -> {
-                addToTransmissionUnitNextState(state)
-            }
-            Action.AddToBothUnits -> {
-                check(state.taskQueueLength > 1)
-                addToTransmissionUnitNextState(addToCPUNextState(state))
-            }
-        }.let {
-            advanceCPUIfActiveNextState(it)
-        }.let {
-            val destinations: List<Pair<UserEquipmentState, List<Symbol>>>
-            if (it.taskQueueLength < userEquipmentStateConfig.taskQueueCapacity) {
-                if (it.tuState == 0) {
-                    destinations = listOf<Pair<UserEquipmentState, List<Symbol>>>(
-                        it to listOf<Symbol>(ParameterSymbol.AlphaC, action),
-                        addTaskNextState(it) to listOf(ParameterSymbol.Alpha, action)
-                    )
-                } else {
-                    destinations = listOf<Pair<UserEquipmentState, List<Symbol>>>(
-                        it to listOf(ParameterSymbol.AlphaC, ParameterSymbol.BetaC, action),
-                        addTaskNextState(it) to listOf(
-                            ParameterSymbol.Alpha,
-                            ParameterSymbol.BetaC,
-                            action
-                        ),
-                        advanceTUNextState(it) to listOf(
-                            ParameterSymbol.AlphaC,
-                            ParameterSymbol.Beta,
-                            action
-                        ),
-                        addTaskNextState(advanceTUNextState(it)) to listOf(
-                            ParameterSymbol.Alpha,
-                            ParameterSymbol.Beta,
-                            action
-                        )
-                    )
-                }
-            } else {
-                if (it.tuState == 0) {
-                    destinations = listOf<Pair<UserEquipmentState, List<Symbol>>>(
-                        it to listOf(action)
-                    )
-                } else {
-                    destinations = listOf<Pair<UserEquipmentState, List<Symbol>>>(
-                        it to listOf(ParameterSymbol.BetaC, action),
-                        advanceTUNextState(it) to listOf(ParameterSymbol.Beta, action)
-                    )
-                }
-            }
-
-            return destinations.map { entry ->
-                Transition(state, entry.first, listOf(entry.second))
-            }
+            else -> {}
         }
     }
 
+    private fun getTransitionsForAction(state: UserEquipmentState, action: Action): List<Transition> {
+        checkStateAgainstLimitations(state)
+        val stateAfterAction = getNextStateRunningAction(state, action).let {
+            if (it.isCPUActive()) getNextStateAdvancingCPU(it) else it
+        }
+        checkStateAgainstLimitations(stateAfterAction)
+        val transitions: MutableList<Transition> = mutableListOf()
+        val notFullIndices = (0 until config.numberOfQueues).filter {
+            state.taskQueueLengths[it] < config.userEquipmentStateConfig.taskQueueCapacity
+        }
+
+        if (notFullIndices.isEmpty()) {
+            if (stateAfterAction.isTUActive()) {
+                transitions.add(
+                    Transition(
+                        source = state,
+                        dest = getNextStateAdvancingTU(stateAfterAction),
+                        transitionSymbols = listOf(listOf(action, ParameterSymbol.Beta))
+                    )
+                )
+                transitions.add(
+                    Transition(
+                        source = state,
+                        dest = stateAfterAction,
+                        transitionSymbols = listOf(listOf(action, ParameterSymbol.BetaC))
+                    )
+                )
+            } else {
+                transitions.add(
+                    Transition(
+                        source = state,
+                        dest = stateAfterAction,
+                        transitionSymbols = listOf(listOf(action))
+                    )
+                )
+            }
+        } else {
+            val taskArrivalMappings = getAllSubsets(notFullIndices.size)
+
+            for (mapping in taskArrivalMappings) {
+                val addTaskSymbols = mapping.mapIndexed { index, taskArrives ->
+                    if (taskArrives) {
+                        ParameterSymbol.Alpha(notFullIndices[index])
+                    } else {
+                        ParameterSymbol.AlphaC(notFullIndices[index])
+                    }
+                }
+
+                if (stateAfterAction.isTUActive()) {
+                    transitions.add(
+                        Transition(
+                            source = state,
+                            dest = stateAfterAction,
+                            transitionSymbols = listOf(listOf(action, ParameterSymbol.Beta) + addTaskSymbols)
+                        )
+                    )
+                    transitions.add(
+                        Transition(
+                            source = state,
+                            dest = stateAfterAction,
+                            transitionSymbols = listOf(listOf(action, ParameterSymbol.BetaC) + addTaskSymbols)
+                        )
+                    )
+                } else {
+                    transitions.add(
+                        Transition(
+                            source = state,
+                            dest = stateAfterAction,
+                            transitionSymbols = listOf(listOf(action) + addTaskSymbols)
+                        )
+                    )
+                }
+            }
+        }
+
+        return transitions
+    }
+
     fun isStatePossible(state: UserEquipmentState): Boolean {
-        if (config.limitation == StateManagerConfig.Limitation.LocalOnly && state.tuState > 0) {
+        if (config.limitation == StateManagerConfig.Limitation.LocalOnly && state.isTUActive()) {
             return false
         }
 
-        if (config.limitation == StateManagerConfig.Limitation.OffloadOnly && state.cpuState > 0) {
+        if (config.limitation == StateManagerConfig.Limitation.OffloadOnly && state.isCPUActive()) {
             return false
         }
 
         return true
     }
-
-    class TaskQueueFullException : IllegalStateException()
 }
+
+class TaskQueueFullException : IllegalStateException()
 
 interface PossibleActionProvider {
     fun getPossibleActions(state: UserEquipmentState): List<Action>

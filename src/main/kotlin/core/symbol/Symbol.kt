@@ -4,11 +4,11 @@ interface Symbol
 
 sealed class ParameterSymbol : Symbol {
 
-    object Alpha : ParameterSymbol()
+    data class Alpha(val queueIndex: Int) : ParameterSymbol()
 
     object Beta : ParameterSymbol()
 
-    object AlphaC : ParameterSymbol()
+    data class AlphaC(val queueIndex: Int) : ParameterSymbol()
 
     object BetaC : ParameterSymbol()
 

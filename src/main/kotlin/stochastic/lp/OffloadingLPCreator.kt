@@ -39,23 +39,38 @@ class OffloadingLPCreator(
 
     private val possibleActionsByState: MutableMap<UserEquipmentState, List<Action>> = mutableMapOf()
 
-    private val symbolMapping: Map<Symbol, Double> = run {
-        mapOf(
-            ParameterSymbol.Beta to systemConfig.beta,
-            ParameterSymbol.BetaC to 1.0 - systemConfig.beta,
-            ParameterSymbol.Alpha to systemConfig.alpha,
-            ParameterSymbol.AlphaC to 1.0 - systemConfig.alpha
-        )
+    private val symbolMapping: Map<Symbol, Double> by lazy { createSymbolMapping() }
+
+    private fun createSymbolMapping(): Map<Symbol, Double> {
+        val result: MutableMap<Symbol, Double> = mutableMapOf()
+
+        for (queueIndex in 0 until systemConfig.numberOfQueues) {
+            result[ParameterSymbol.Alpha(queueIndex)] = systemConfig.alpha[queueIndex]
+            result[ParameterSymbol.AlphaC(queueIndex)] = 1.0 - systemConfig.alpha[queueIndex]
+        }
+
+        result[ParameterSymbol.Beta] = systemConfig.beta
+        result[ParameterSymbol.BetaC] = 1.0 - systemConfig.beta
+
+        return result
     }
 
     private lateinit var itCalculator: IndependentTransitionCalculator
 
     private fun getObjectiveEquation(): EquationRow {
-        val rhsObjective = -expectedTaskTime()
+        var rhsObjective = 0.0
+        for (queueIndex in 0 until systemConfig.numberOfQueues) {
+            rhsObjective += -expectedTaskTime(queueIndex)
+        }
+
         val coefficients = mutableListOfZeros(indexMapping.variableCount)
 
         indexMapping.coefficientIndexByStateAction.forEach { (stateAction: StateAction, index: Int) ->
-            val coefficientValue = stateAction.state.taskQueueLength / systemConfig.alpha
+            var coefficientValue = 0.0
+            stateAction.state.taskQueueLengths.forEach { value ->
+                coefficientValue += value / systemConfig.taskQueueCapacity
+            }
+
             coefficients[index] = coefficientValue
         }
 
@@ -66,10 +81,10 @@ class OffloadingLPCreator(
         )
     }
 
-    private fun expectedTaskTime(): Double {
-        val eta: Double = systemConfig.eta
-        val numberOfSections: Int = systemConfig.cpuNumberOfSections
-        return (eta * numberOfSections + (1 - eta) * systemConfig.expectedTCloud())
+    private fun expectedTaskTime(queueIndex: Int): Double {
+        val eta: Double = systemConfig.eta[queueIndex]
+        val numberOfSections: Int = systemConfig.cpuNumberOfSections[queueIndex]
+        return (eta * numberOfSections + (1 - eta) * systemConfig.expectedTCloud(queueIndex))
     }
 
     private fun getEquation2(): EquationRow {
@@ -83,19 +98,11 @@ class OffloadingLPCreator(
             val (state, action) = stateAction
             var coefficientValue = 0.0
 
-            if (state.tuState > 0 || (action in listOf(
-                    Action.AddToTransmissionUnit,
-                    Action.AddToBothUnits
-                ))
-            ) {
+            if (state.tuState > 0 || (action is Action.AddToTransmissionUnit || action is Action.AddToBothUnits)) {
                 coefficientValue += beta * pTx
             }
 
-            if (state.cpuState > 0 || (action in listOf(
-                    Action.AddToCPU,
-                    Action.AddToBothUnits
-                ))
-            ) {
+            if (state.cpuState > 0 || (action is Action.AddToCPU) || (action is Action.AddToBothUnits)) {
                 coefficientValue += pLoc
             }
 
@@ -110,21 +117,49 @@ class OffloadingLPCreator(
         )
     }
 
-    private fun getEquation3(): EquationRow {
+    private fun getEquations3(): List<EquationRow> {
+        val result: MutableList<EquationRow> = mutableListOf()
+
+        for (queueIndex in 0 until systemConfig.numberOfQueues) {
+            result.add(getEquation3(queueIndex))
+        }
+
+        return result
+    }
+
+    private fun getEquation3(queueIndex: Int): EquationRow {
         val coefficients = mutableListOfZeros(indexMapping.variableCount)
         val rhsEquation3 = 0.0
 
         indexMapping.coefficientIndexByStateAction.forEach { (stateAction, index) ->
             val (state, action) = stateAction
+            if (stateAction.action is Action.NoOperation) {
+                return@forEach
+            }
             val coefficientValue = when (action) {
-                Action.AddToCPU -> {
-                    (1.0 - systemConfig.eta)
+                is Action.AddToCPU -> {
+                    if (action.queueIndex == queueIndex) {
+                        1.0 - systemConfig.eta[queueIndex]
+                    } else {
+                        0.0
+                    }
                 }
-                Action.AddToBothUnits -> {
-                    (1.0 - 2 * systemConfig.eta)
+                is Action.AddToBothUnits -> {
+                    var temp = 0.0
+                    if (action.cpuTaskQueueIndex == queueIndex) {
+                        temp += (1.0 -systemConfig.eta[queueIndex])
+                    }
+                    if (action.transmissionUnitTaskQueueIndex == queueIndex) {
+                        temp += -systemConfig.eta[queueIndex]
+                    }
+                    temp
                 }
-                Action.AddToTransmissionUnit -> {
-                    (-systemConfig.eta)
+                is Action.AddToTransmissionUnit -> {
+                    if (action.queueIndex == queueIndex) {
+                        -systemConfig.eta[queueIndex]
+                    } else {
+                        0.0
+                    }
                 }
                 Action.NoOperation -> {
                     0.0
@@ -157,7 +192,8 @@ class OffloadingLPCreator(
 
         indexMapping.coefficientIndexByStateAction.forEach { (stateAction, index) ->
             val (sourceState, action) = stateAction
-            val independentTransitionValue = itCalculator.getIndependentTransitionFraction(sourceState, destState, action)
+            val independentTransitionValue =
+                itCalculator.getIndependentTransitionFraction(sourceState, destState, action)
 
             val coefficientValue: Double = if (sourceState == destState) {
                 independentTransitionValue - 1
@@ -185,27 +221,6 @@ class OffloadingLPCreator(
         )
     }
 
-    private fun getEquations6(): List<EquationRow> {
-        val equations: MutableList<EquationRow> = mutableListOf()
-
-        systemConfig.stateConfig.getFullStates().filter { userEquipmentStateManager.isStatePossible(it) }.forEach {
-            val coefficients = mutableListOfZeros(indexMapping.variableCount)
-            val possibleActions = userEquipmentStateManager.getPossibleActions(it)
-            if (possibleActions.size > 1) {
-                val stateAction = StateAction(it, Action.NoOperation)
-                val index = indexMapping.coefficientIndexByStateAction[StateAction(it, Action.NoOperation)]!!
-                coefficients[index] = 1.0
-                equations.add(
-                    EquationRow(
-                        coefficients = coefficients,
-                        rhs = 0.0
-                    )
-                )
-            }
-        }
-        return equations
-    }
-
     private fun populatePossibleActions() {
         check(possibleActionsByState.isEmpty())
 
@@ -216,7 +231,8 @@ class OffloadingLPCreator(
     }
 
     fun equationMapping(equationRow: EquationRow): Map<StateAction, Double> {
-        return equationRow.coefficients.mapIndexed { index, d -> indexMapping.stateActionByCoefficientIndex[index]!! to d }.toMap()
+        return equationRow.coefficients.mapIndexed { index, d -> indexMapping.stateActionByCoefficientIndex[index]!! to d }
+            .toMap()
     }
 
     fun createOffloadingLinearProgram(): OffloadingLinearProgram {
@@ -230,7 +246,7 @@ class OffloadingLPCreator(
         with(equations) {
             add(getObjectiveEquation())
             add(getEquation2())
-            add(getEquation3())
+            addAll(getEquations3())
             addAll(getEquations4())
             add(getEquation5())
             // addAll(getEquations6())
@@ -280,7 +296,7 @@ class OffloadingLPCreator(
         with(equations) {
             add(getObjectiveEquation())
             add(getEquation2())
-            add(getEquation3())
+            addAll(getEquations3())
             for (i in 1..systemConfig.stateCount()) {
                 add(null)
             }

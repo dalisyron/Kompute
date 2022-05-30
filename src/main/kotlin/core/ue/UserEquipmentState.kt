@@ -1,20 +1,22 @@
 package core.ue
 
 data class UserEquipmentState(
-    val taskQueueLength: Int,
+    val taskQueueLengths: List<Int>,
     val tuState: Int,
-    val cpuState: Int
+    val cpuState: Int,
+    val tuTaskTypeQueueIndex: Int?,
+    val cpuTaskTypeQueueIndex: Int?
 ) {
 
-    companion object {
-        fun UserEquipmentState.validate() {
-            check(taskQueueLength >= 0)
-            check(tuState >= 0)
-            check(cpuState >= -1)
-        }
+    override fun toString(): String {
+        return "{ QueueLengths = (${taskQueueLengths.joinToString(", ")}), TU State = ($tuState), TU TaskTypeQueueIndex = ($tuTaskTypeQueueIndex), CPUState = (${cpuState}), CPUTaskTypeQueueIndex = (${cpuTaskTypeQueueIndex})"
     }
 
-    override fun toString(): String {
-        return "($taskQueueLength, $tuState, $cpuState)"
+    fun isCPUActive(): Boolean {
+        return cpuState > 0 || cpuState == -1
+    }
+
+    fun isTUActive(): Boolean {
+        return tuState > 0
     }
 }

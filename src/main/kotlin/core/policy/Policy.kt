@@ -9,7 +9,7 @@ data class UserEquipmentExecutionState(
     val pMax: Double
 ) {
     fun averagePower(): Double = totalConsumedPower / timeSlot
-    val taskQueueLength = ueState.taskQueueLength
+    val taskQueueLength = ueState.taskQueueLengths
     val tuState = ueState.tuState
     val cpuState = ueState.cpuState
 }
