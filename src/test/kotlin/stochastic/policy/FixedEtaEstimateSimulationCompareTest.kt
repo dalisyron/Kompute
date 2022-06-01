@@ -2,7 +2,8 @@ package stochastic.policy
 
 import com.google.common.truth.Truth
 import core.ue.OffloadingSystemConfig
-import core.ue.OffloadingSystemConfig.Companion.withEta
+import core.ue.OffloadingSystemConfig.Companion.withEtaConfig
+import core.ue.OffloadingSystemConfig.Companion.withEtaConfigSingleQueue
 import simulation.simulation.Simulator
 import stochastic.lp.OptimalPolicyFinder
 
@@ -17,6 +18,7 @@ class FixedEtaEstimateSimulationCompareTest(
 
     fun runTest() {
         check(sampleCount >= 1)
+        check(baseSystemConfig.numberOfQueues == 1)
 
         val etas = if (sampleCount == 1) {
             check(etaEnd == etaStart)
@@ -27,7 +29,7 @@ class FixedEtaEstimateSimulationCompareTest(
 
         etas.forEach {
             println("testing for eta = $it")
-            val config = baseSystemConfig.withEta(it)
+            val config = baseSystemConfig.withEtaConfigSingleQueue(it)
             val optimalPolicy = OptimalPolicyFinder.findOptimalPolicy(config)
 
             val averageDelayEstimate = optimalPolicy.averageDelay

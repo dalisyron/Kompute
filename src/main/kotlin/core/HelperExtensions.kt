@@ -1,6 +1,8 @@
 package core
 
+import java.lang.Integer.min
 import kotlin.random.Random
+import kotlin.random.nextInt
 import kotlin.system.measureTimeMillis
 
 fun <T> runRecordingMillis(label: String, block: () -> T): T {
@@ -37,7 +39,7 @@ fun List<Int>.decrementedAt(pos: Int): List<Int> {
 
 fun List<Int>.incrementedAt(pos: Int): List<Int> {
     val temp = toMutableList()
-    temp[pos]--
+    temp[pos]++
     return temp
 }
 
@@ -59,8 +61,9 @@ class TupleGenerator(
     val sizes: List<Int>
 ) {
     init {
-        check(sizes.size > 1)
+        check(sizes.isNotEmpty())
     }
+
     var tuples: List<List<Int>> = mutableListOf()
 
     private fun generateHelper(index: Int) {
@@ -89,5 +92,42 @@ class TupleGenerator(
 
             return generator.tuples
         }
+    }
+}
+
+object EtaGenerator {
+    fun generate(queueCount: Int, precision: Int): List<List<Double>> {
+        val tuples = TupleGenerator.generateTuples((1..queueCount).map { precision + 1 })
+        return tuples.map { it ->
+            it.map { it.toDouble() / precision }
+        }
+    }
+}
+
+fun <T : Comparable<T>> List<T>.compareTo(other: List<T>): Int {
+    require(this.isNotEmpty())
+    require(other.isNotEmpty())
+
+    for (i in 0 until min(this.size, other.size)) {
+        if (this[i] != other[i]) {
+            return this[i].compareTo(other[i])
+        }
+    }
+
+    return 0
+}
+
+fun Int.pow(n: Int): Int {
+    val x = this
+    require(n >= 0)
+
+    if (n == 0) {
+        return 1
+    } else {
+        var pw = (x * x).pow(n / 2)
+        if (n % 2 > 0) {
+            pw *= x
+        }
+        return pw
     }
 }

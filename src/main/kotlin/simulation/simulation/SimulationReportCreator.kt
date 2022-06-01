@@ -22,6 +22,9 @@ class SimulationReportCreator(
 
         // val transmissionTimes = mutableListOf<Int>()
 
+//        println("events = $events")
+//        println("eventsById = $eventsById")
+
         val taskDelays: Map<Int, Double> = eventsById.mapValues { (_, list) ->
             val startTime: Int = list.find { it is Event.TaskArrival }!!.timeSlot
             val finishTime: Double = if (list.any { it is Event.TaskTransmittedByTU }) {

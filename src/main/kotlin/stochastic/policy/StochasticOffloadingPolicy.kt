@@ -5,7 +5,6 @@ import core.policy.Policy
 import core.policy.UserEquipmentExecutionState
 import stochastic.lp.StateAction
 import core.ue.OffloadingSystemConfig
-import core.ue.UserEquipmentStateConfig.Companion.allStates
 import core.UserEquipmentStateManager
 import stochastic.lp.OffloadingSolver
 import core.ue.UserEquipmentState
@@ -33,7 +32,7 @@ data class StochasticOffloadingPolicy(
     }
 
     fun validate() {
-        systemConfig.stateConfig.allStates().forEach { state ->
+        userEquipmentStateManager.allStates().forEach { state ->
             var probabilitySum = 0.0
             systemConfig.allActions.forEach { action ->
                 val actionProbability = stochasticPolicyConfig.decisionProbabilities[StateAction(state, action)]!!
@@ -61,7 +60,7 @@ data class StochasticOffloadingPolicy(
         val lines = mutableListOf<String>()
         lines.add("===============")
         lines.add("POLICY : ")
-        lines.add("eta = ${stochasticPolicyConfig.eta}")
+        lines.add("eta = ${stochasticPolicyConfig.etaConfig}")
         val probabilityMap: Map<UserEquipmentState, List<Map.Entry<StateAction, Double>>> = stochasticPolicyConfig.decisionProbabilities.entries.groupBy { it.key.state }
 
         probabilityMap.forEach { (state, probabilities) ->

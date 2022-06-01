@@ -4,6 +4,8 @@ import core.ue.UserEquipmentState
 import core.ue.UserEquipmentStateConfig
 import core.symbol.ParameterSymbol
 import core.policy.Action
+import core.ue.OffloadingSystemConfig
+import core.ue.UserEquipmentConfig
 import stochastic.dtmc.EdgeProvider
 import stochastic.dtmc.transition.Edge
 import stochastic.dtmc.transition.Transition
@@ -12,7 +14,7 @@ import java.lang.Integer.max
 
 data class StateManagerConfig(
     val userEquipmentStateConfig: UserEquipmentStateConfig,
-    val limitation: List<Limitation> = Limitation.None
+    val limitation: List<Limitation>
 ) {
 
     val numberOfQueues: Int = userEquipmentStateConfig.numberOfQueues
@@ -20,9 +22,24 @@ data class StateManagerConfig(
     enum class Limitation {
         None, LocalOnly, OffloadOnly
     }
+
+    companion object {
+
+        fun singleQueue(
+            userEquipmentStateConfig: UserEquipmentStateConfig,
+            limitation: Limitation = Limitation.None
+        ): StateManagerConfig {
+            require(userEquipmentStateConfig.numberOfQueues == 1)
+            return StateManagerConfig(
+                userEquipmentStateConfig = userEquipmentStateConfig,
+                limitation = listOf(limitation)
+            )
+        }
+    }
 }
 
 class UserEquipmentStateManager(private val config: StateManagerConfig) : PossibleActionProvider, EdgeProvider {
+
     private val userEquipmentStateConfig = config.userEquipmentStateConfig
 
     fun getNextStateRunningAction(sourceState: UserEquipmentState, action: Action): UserEquipmentState {
@@ -52,6 +69,11 @@ class UserEquipmentStateManager(private val config: StateManagerConfig) : Possib
         cpuQueueIndex: Int,
         transmissionUnitTaskQueueIndex: Int
     ): UserEquipmentState {
+        if (cpuQueueIndex == transmissionUnitTaskQueueIndex) {
+            check(sourceState.taskQueueLengths[cpuQueueIndex] > 1)
+        } else {
+            check(sourceState.taskQueueLengths[cpuQueueIndex] > 0 && sourceState.taskQueueLengths[transmissionUnitTaskQueueIndex] > 0)
+        }
         return getNextStateAddingToCPU(
             getNextStateAddingToTU(sourceState, transmissionUnitTaskQueueIndex),
             cpuQueueIndex
@@ -64,7 +86,8 @@ class UserEquipmentStateManager(private val config: StateManagerConfig) : Possib
 
         return sourceState.copy(
             taskQueueLengths = sourceState.taskQueueLengths.decrementedAt(queueIndex),
-            cpuState = -1
+            cpuState = -1,
+            cpuTaskTypeQueueIndex = queueIndex
         )
     }
 
@@ -74,7 +97,8 @@ class UserEquipmentStateManager(private val config: StateManagerConfig) : Possib
 
         return sourceState.copy(
             taskQueueLengths = sourceState.taskQueueLengths.decrementedAt(queueIndex),
-            tuState = 1
+            tuState = 1,
+            tuTaskTypeQueueIndex = queueIndex
         )
     }
 
@@ -82,7 +106,9 @@ class UserEquipmentStateManager(private val config: StateManagerConfig) : Possib
         if (sourceState.taskQueueLengths[queueIndex] == userEquipmentStateConfig.taskQueueCapacity) {
             throw TaskQueueFullException()
         }
-        require(sourceState.taskQueueLengths[queueIndex] in 0 until userEquipmentStateConfig.taskQueueCapacity)
+        require(sourceState.taskQueueLengths[queueIndex] in 0 until userEquipmentStateConfig.taskQueueCapacity) {
+            "${sourceState.taskQueueLengths[queueIndex]} | ${userEquipmentStateConfig.taskQueueCapacity}"
+        }
 
         return sourceState.copy(
             taskQueueLengths = sourceState.taskQueueLengths.incrementedAt(queueIndex)
@@ -91,12 +117,12 @@ class UserEquipmentStateManager(private val config: StateManagerConfig) : Possib
 
     fun getNextStateAdvancingCPU(sourceState: UserEquipmentState): UserEquipmentState {
         check(sourceState.cpuState > 0 || sourceState.cpuState == -1)
-        val numberOfSections = userEquipmentStateConfig.cpuNumberOfSections[sourceState.cpuTaskTypeQueueIndex!!]
+        val numberOfSections = userEquipmentStateConfig.cpuNumberOfSections[sourceState.cpuTaskTypeQueueIndex]
 
         if (sourceState.cpuState == numberOfSections - 1 || (sourceState.cpuState == -1 && numberOfSections == 1)) {
             return sourceState.copy(
                 cpuState = 0,
-                cpuTaskTypeQueueIndex = null
+                cpuTaskTypeQueueIndex = -1
             )
         } else {
             return sourceState.copy(
@@ -107,12 +133,12 @@ class UserEquipmentStateManager(private val config: StateManagerConfig) : Possib
 
     fun getNextStateAdvancingTU(sourceState: UserEquipmentState): UserEquipmentState {
         check(sourceState.tuState > 0)
-        val numberOfPackets = userEquipmentStateConfig.tuNumberOfPackets[sourceState.tuTaskTypeQueueIndex!!]
+        val numberOfPackets = userEquipmentStateConfig.tuNumberOfPackets[sourceState.tuTaskTypeQueueIndex]
 
-        if (sourceState.tuState == numberOfPackets - 1) {
+        if (sourceState.tuState == numberOfPackets) {
             return sourceState.copy(
                 tuState = 0,
-                tuTaskTypeQueueIndex = null
+                tuTaskTypeQueueIndex = -1
             )
         } else {
             return sourceState.copy(
@@ -132,13 +158,17 @@ class UserEquipmentStateManager(private val config: StateManagerConfig) : Possib
 
         if (!state.isCPUActive()) {
             for (queueIndex in nonEmptyQueueIndices) {
-                result.add(Action.AddToCPU(queueIndex))
+                if (config.limitation[queueIndex] != StateManagerConfig.Limitation.OffloadOnly) {
+                    result.add(Action.AddToCPU(queueIndex))
+                }
             }
         }
 
         if (!state.isTUActive()) {
             for (queueIndex in nonEmptyQueueIndices) {
-                result.add(Action.AddToCPU(queueIndex))
+                if (config.limitation[queueIndex] != StateManagerConfig.Limitation.LocalOnly) {
+                    result.add(Action.AddToTransmissionUnit(queueIndex))
+                }
             }
         }
 
@@ -147,22 +177,26 @@ class UserEquipmentStateManager(private val config: StateManagerConfig) : Possib
                 for (j in nonEmptyQueueIndices) {
                     if (i == j && state.taskQueueLengths[i] < 2) continue
 
-                    result.add(
-                        Action.AddToBothUnits(
-                            cpuTaskQueueIndex = i,
-                            transmissionUnitTaskQueueIndex = j
+                    if (config.limitation[i] != StateManagerConfig.Limitation.OffloadOnly && config.limitation[j] != StateManagerConfig.Limitation.LocalOnly) {
+                        result.add(
+                            Action.AddToBothUnits(
+                                cpuTaskQueueIndex = i,
+                                transmissionUnitTaskQueueIndex = j
+                            )
                         )
-                    )
+                    }
                 }
             }
         }
 
-        return result
+        return result.sorted()
     }
 
     fun getEdgesForState(state: UserEquipmentState): List<Edge> {
         return getPossibleActions(state)
-            .map { action -> getTransitionsForAction(state, action) }
+            .map { action ->
+                getTransitionsForAction(state, action)
+            }
             .flatten().map { it.toEdge() }
     }
 
@@ -184,14 +218,13 @@ class UserEquipmentStateManager(private val config: StateManagerConfig) : Possib
     }
 
     private fun checkStateAgainstLimitations(state: UserEquipmentState) {
-        when (config.limitation) {
-            StateManagerConfig.Limitation.LocalOnly -> {
-                check(!state.isTUActive())
+        if (config.limitation.all { it == StateManagerConfig.Limitation.LocalOnly }) {
+            check(!state.isTUActive())
+        }
+        if (config.limitation.all { it == StateManagerConfig.Limitation.OffloadOnly }) {
+            check(!state.isCPUActive()) {
+                state
             }
-            StateManagerConfig.Limitation.OffloadOnly -> {
-                check(!state.isCPUActive())
-            }
-            else -> {}
         }
     }
 
@@ -274,15 +307,74 @@ class UserEquipmentStateManager(private val config: StateManagerConfig) : Possib
     }
 
     fun isStatePossible(state: UserEquipmentState): Boolean {
-        if (config.limitation == StateManagerConfig.Limitation.LocalOnly && state.isTUActive()) {
+        try {
+            checkStateAgainstLimitations(state)
+            return true
+        } catch (e: IllegalStateException) {
             return false
         }
+    }
 
-        if (config.limitation == StateManagerConfig.Limitation.OffloadOnly && state.isCPUActive()) {
-            return false
+    fun getInitialState(): UserEquipmentState {
+        return UserEquipmentState(
+            taskQueueLengths = (1..userEquipmentStateConfig.numberOfQueues).map { 0 },
+            tuState = 0,
+            cpuState = 0,
+            tuTaskTypeQueueIndex = -1,
+            cpuTaskTypeQueueIndex = -1
+        )
+    }
+
+    fun allStates(): List<UserEquipmentState> {
+        val states: List<UserEquipmentState> = allStatesUnchecked()
+
+        val possibleStates = states.filterNot {
+            val badA = !it.isCPUActive() && (it.cpuTaskTypeQueueIndex != -1)
+            val badB = !it.isTUActive() && (it.tuTaskTypeQueueIndex != -1)
+            val badC = it.isCPUActive() && (it.cpuTaskTypeQueueIndex == -1)
+            val badD = it.isTUActive() && (it.tuTaskTypeQueueIndex == -1)
+
+            return@filterNot badA || badB || badC || badD
+        }.filterNot { it ->
+            val badA = (it.isCPUActive() && config.limitation.all { it == StateManagerConfig.Limitation.OffloadOnly })
+            val badB = (it.isTUActive() && config.limitation.all { it == StateManagerConfig.Limitation.LocalOnly })
+            return@filterNot badA || badB
+        }
+        return possibleStates.sorted()
+    }
+
+    fun allStatesUnchecked(): List<UserEquipmentState> {
+        val dimensions: List<Int> =
+            (1..config.numberOfQueues).map { config.userEquipmentStateConfig.taskQueueCapacity + 1 } + listOf(config.userEquipmentStateConfig.tuNumberOfPackets.maxOrNull()!! + 1) + listOf(
+                config.userEquipmentStateConfig.cpuNumberOfSections.maxOrNull()!!
+            ) + listOf(config.numberOfQueues + 1) + listOf(config.numberOfQueues + 1)
+
+        val states: List<UserEquipmentState> = TupleGenerator.generateTuples(dimensions).map { tuple ->
+            val cpuTaskTypeQueueIndex: Int = tuple[tuple.size - 1] - 1
+            val tuTaskTypeQueueIndex: Int = tuple[tuple.size - 2] - 1
+
+            UserEquipmentState(
+                taskQueueLengths = tuple.subList(0, config.numberOfQueues),
+                tuState = tuple[config.numberOfQueues],
+                cpuState = tuple[config.numberOfQueues + 1],
+                tuTaskTypeQueueIndex = tuTaskTypeQueueIndex,
+                cpuTaskTypeQueueIndex = cpuTaskTypeQueueIndex
+            )
         }
 
-        return true
+        return states.sorted()
+    }
+
+    companion object {
+
+        fun fromSystemConfig(offloadingSystemConfig: OffloadingSystemConfig): UserEquipmentStateManager {
+            return UserEquipmentStateManager(
+                config = StateManagerConfig(
+                    userEquipmentStateConfig = offloadingSystemConfig.stateConfig,
+                    limitation = offloadingSystemConfig.getLimitation()
+                )
+            )
+        }
     }
 }
 

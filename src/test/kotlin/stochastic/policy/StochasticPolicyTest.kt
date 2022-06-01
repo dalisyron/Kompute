@@ -12,10 +12,14 @@ import simulation.simulation.Simulator
 import stochastic.lp.OptimalPolicyFinder
 import core.ue.OffloadingSystemConfig
 import core.ue.OffloadingSystemConfig.Companion.withAlpha
+import core.ue.OffloadingSystemConfig.Companion.withAlphaSingleQueue
 import core.ue.OffloadingSystemConfig.Companion.withBeta
-import core.ue.OffloadingSystemConfig.Companion.withEta
+import core.ue.OffloadingSystemConfig.Companion.withEtaConfig
+import core.ue.OffloadingSystemConfig.Companion.withEtaConfigSingleQueue
 import core.ue.OffloadingSystemConfig.Companion.withNumberOfPackets
+import core.ue.OffloadingSystemConfig.Companion.withNumberOfPacketsSingleQueue
 import core.ue.OffloadingSystemConfig.Companion.withNumberOfSections
+import core.ue.OffloadingSystemConfig.Companion.withNumberOfSectionsSingleQueue
 import core.ue.OffloadingSystemConfig.Companion.withPLocal
 import core.ue.OffloadingSystemConfig.Companion.withPMax
 import core.ue.OffloadingSystemConfig.Companion.withPTx
@@ -43,15 +47,15 @@ class StochasticPolicyTest {
             tRx = 0.0,
         )
         val userEquipmentConfig = UserEquipmentConfig(
-            stateConfig = UserEquipmentStateConfig(
+            stateConfig = UserEquipmentStateConfig.singleQueue(
                 taskQueueCapacity = 15, // set to some big number,
                 tuNumberOfPackets = 1,
                 cpuNumberOfSections = 17
             ),
-            componentsConfig = UserEquipmentComponentsConfig(
+            componentsConfig = UserEquipmentComponentsConfig.singleQueue(
                 alpha = 0.2,
                 beta = 0.4,
-                eta = 0.0, // Not used in the baseline policies, set to whatever
+                etaConfig = 0.0, // Not used in the baseline policies, set to whatever
                 pTx = 1.5,
                 pLocal = 1.5,
                 pMax = 500.0
@@ -59,13 +63,7 @@ class StochasticPolicyTest {
         )
         val systemCofig = OffloadingSystemConfig(
             userEquipmentConfig = userEquipmentConfig,
-            environmentParameters = environmentParameters,
-            allActions = setOf(
-                Action.NoOperation,
-                Action.AddToCPU,
-                Action.AddToTransmissionUnit,
-                Action.AddToBothUnits
-            )
+            environmentParameters = environmentParameters
         )
 
         return systemCofig
@@ -74,7 +72,7 @@ class StochasticPolicyTest {
     @Test
     @Category(SlowTests::class)
     fun testPolicyAverageBetterThanGreedyOffloadFirst() {
-        val simpleConfig = getSimpleConfig().withTaskQueueCapacity(10).withEta(1e-9)
+        val simpleConfig = getSimpleConfig().withTaskQueueCapacity(10).withEtaConfigSingleQueue(1e-9)
         val stochasticPolicy = RangedOptimalPolicyFinder.findOptimalPolicy(
             simpleConfig,
             0.0,
@@ -88,7 +86,7 @@ class StochasticPolicyTest {
         val averageDelayStochastic = simulator.simulatePolicy(stochasticPolicy, 2000_000).averageDelay
         val averageDelayGof = simulator.simulatePolicy(greedyOffloadFirstPolicy, 2000_000).averageDelay
 
-        println("Average delay for stochastic = $averageDelayStochastic with eta=${stochasticPolicy.stochasticPolicyConfig.eta} | Average delay for greedy = $averageDelayGof")
+        println("Average delay for stochastic = $averageDelayStochastic with eta=${stochasticPolicy.stochasticPolicyConfig.etaConfig} | Average delay for greedy = $averageDelayGof")
 
         assertThat(averageDelayStochastic)
             .isLessThan(averageDelayGof)
@@ -116,10 +114,10 @@ class StochasticPolicyTest {
     fun testCompareSimulationWithEtaAnomaly() {
         // Found in previous test runs
         val baseConfig = getSimpleConfig()
-                .withEta(0.6)
-                .withAlpha(0.2)
+                .withEtaConfigSingleQueue(0.6)
+                .withAlphaSingleQueue(0.2)
                 .withBeta(0.6)
-                .withNumberOfSections(3)
+                .withNumberOfSectionsSingleQueue(3)
                 .withTaskQueueCapacity(100)
                 .withPMax(200.0)
 
@@ -142,7 +140,7 @@ class StochasticPolicyTest {
         val simulationTicks = 1_000_000
 
         for (alpha in alphas) {
-            val config = baseConfig.withAlpha(alpha)
+            val config = baseConfig.withAlphaSingleQueue(alpha)
             val simulator = Simulator(config)
             val stochastic = RangedOptimalPolicyFinder.findOptimalPolicy(config, 0.0, 1.0, 100)
 
@@ -166,7 +164,7 @@ class StochasticPolicyTest {
 
     @Test
     fun offloadOnlyStochastic() {
-        val config = Mock.configFromLiyu().withEta(0.0).withAlpha(0.01)
+        val config = Mock.configFromLiyu().withEtaConfigSingleQueue(0.0).withAlphaSingleQueue(0.01)
         val simulator = Simulator(config)
         val simulationTicks = 10_000_000
         val stochasticPolicy: StochasticOffloadingPolicy = OptimalPolicyFinder.findOptimalPolicy(config)
@@ -182,7 +180,7 @@ class StochasticPolicyTest {
     @Test
     fun rangedTest1() {
         val tester = RangedAlphaStochasticPolicyTester(
-            baseSystemConfig = Mock.configFromLiyu().withBeta(0.2).withNumberOfSections(5).withPMax(1.4),
+            baseSystemConfig = Mock.configFromLiyu().withBeta(0.2).withNumberOfSectionsSingleQueue(5).withPMax(1.4),
             alphaStart = 0.01,
             alphaEnd = 1.0,
             alphaSampleCount = 50,
@@ -200,7 +198,7 @@ class StochasticPolicyTest {
         val tester = RangedAlphaStochasticPolicyTester(
             baseSystemConfig = Mock.configFromLiyu()
                 .withBeta(0.2)
-                .withNumberOfSections(5)
+                .withNumberOfSectionsSingleQueue(5)
                 .withPMax(1.4)
                 .withTaskQueueCapacity(30),
             alphaStart = 0.01,
@@ -220,7 +218,7 @@ class StochasticPolicyTest {
         val tester = RangedAlphaStochasticPolicyTester(
             baseSystemConfig = Mock.configFromLiyu()
                 .withBeta(0.2)
-                .withNumberOfSections(5)
+                .withNumberOfSectionsSingleQueue(5)
                 .withPMax(1.4)
                 .withTaskQueueCapacity(50),
             alphaStart = 0.35,
@@ -239,7 +237,7 @@ class StochasticPolicyTest {
         val tester = RangedAlphaStochasticPolicyTester(
             baseSystemConfig = Mock.configFromLiyu()
                 .withBeta(0.2)
-                .withNumberOfSections(5)
+                .withNumberOfSectionsSingleQueue(5)
                 .withPMax(1.4)
                 .withTaskQueueCapacity(20),
             alphaStart = 0.01,
@@ -259,8 +257,8 @@ class StochasticPolicyTest {
         val tester = RangedAlphaStochasticPolicyTester(
             baseSystemConfig = Mock.configFromLiyu()
                 .withBeta(0.8)
-                .withNumberOfPackets(2)
-                .withNumberOfSections(5)
+                .withNumberOfPacketsSingleQueue(2)
+                .withNumberOfSectionsSingleQueue(5)
                 .withPMax(1.4)
                 .withTaskQueueCapacity(50),
             alphaStart = 0.57,
@@ -280,8 +278,8 @@ class StochasticPolicyTest {
         val tester = RangedAlphaStochasticPolicyTester(
             baseSystemConfig = Mock.configFromLiyu()
                 .withBeta(0.8)
-                .withNumberOfPackets(2)
-                .withNumberOfSections(8)
+                .withNumberOfPacketsSingleQueue(2)
+                .withNumberOfSectionsSingleQueue(8)
                 .withPMax(0.8)
                 .withTRx(3.0)
                 .withTaskQueueCapacity(25),
@@ -303,8 +301,8 @@ class StochasticPolicyTest {
             baseSystemConfig = Mock.configFromLiyu()
                 .withPMax(2.5)
                 .withBeta(0.99)
-                .withNumberOfPackets(3)
-                .withNumberOfSections(9)
+                .withNumberOfPacketsSingleQueue(3)
+                .withNumberOfSectionsSingleQueue(9)
                 .withPLocal(4.0 / 3.0)
                 .withPTx(2.0)
                 .withTaskQueueCapacity(25),
@@ -324,10 +322,10 @@ class StochasticPolicyTest {
     fun testDelayOffloadOnly() {
         val systemConfig = Mock.configFromLiyu()
             .withPMax(0.75)
-            .withAlpha(0.6)
+            .withAlphaSingleQueue(0.6)
             .withBeta(0.99)
-            .withNumberOfPackets(1)
-            .withNumberOfSections(6)
+            .withNumberOfPacketsSingleQueue(1)
+            .withNumberOfSectionsSingleQueue(6)
             .withPLocal(0.5 / 6.0)
             .withPTx(1.5)
             .withTaskQueueCapacity(30)
@@ -344,10 +342,10 @@ class StochasticPolicyTest {
     @Test
     fun testEdgeCaseGreedyLocalBetter() {
         val systemConfig = Mock.configFromLiyu().withBeta(0.2)
-            .withNumberOfSections(5)
+            .withNumberOfSectionsSingleQueue(5)
             .withTaskQueueCapacity(30)
             .withPMax(1.8)
-            .withAlpha(0.2)
+            .withAlphaSingleQueue(0.2)
 
         val simulationTicks = 2_000_000
         val simulator = Simulator(systemConfig)
@@ -369,11 +367,11 @@ class StochasticPolicyTest {
     fun testIneffectivePolicyException() {
         val systemConfig = Mock.configFromLiyu()
             .withPMax(0.75)
-            .withAlpha(0.999)
+            .withAlphaSingleQueue(0.999)
             .withBeta(0.99)
-            .withEta(0.0)
-            .withNumberOfPackets(1)
-            .withNumberOfSections(6)
+            .withEtaConfigSingleQueue(0.0)
+            .withNumberOfPacketsSingleQueue(1)
+            .withNumberOfSectionsSingleQueue(6)
             .withPLocal(0.5 / 6.0)
             .withPTx(1.5)
             .withTaskQueueCapacity(40)
@@ -389,8 +387,8 @@ class StochasticPolicyTest {
             baseSystemConfig = Mock.configFromLiyu()
                 .withPMax(0.75)
                 .withBeta(0.99)
-                .withNumberOfPackets(1)
-                .withNumberOfSections(6)
+                .withNumberOfPacketsSingleQueue(1)
+                .withNumberOfSectionsSingleQueue(6)
                 .withPLocal(0.5 / 6.0)
                 .withPTx(1.5)
                 .withTaskQueueCapacity(25),
@@ -410,11 +408,11 @@ class StochasticPolicyTest {
     fun testSampleFromLiyuUnlimitedPower() {
         val tester = RangedAlphaStochasticPolicyTester(
             baseSystemConfig = Mock.configFromLiyu().withTaskQueueCapacity(20).withPMax(30.0),
-            alphaStart = 0.01,
+            alphaStart = 0.31,
             alphaEnd = 0.40,
             alphaSampleCount = 40,
-            precision = 200,
-            simulationTicks = 1_000_000 ,
+            precision = 10,
+            simulationTicks = 10_000,
             plotEnabled = true,
             assertionsEnabled = true
         )

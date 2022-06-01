@@ -7,7 +7,6 @@ import core.policy.Action
 import stochastic.dtmc.IndependentTransitionCalculator
 import core.ue.OffloadingSystemConfig
 import core.ue.UserEquipmentState
-import core.ue.UserEquipmentStateConfig.Companion.allStates
 import core.UserEquipmentStateManager
 import stochastic.dtmc.DTMCCreator
 import stochastic.dtmc.DiscreteTimeMarkovChain
@@ -23,7 +22,7 @@ data class StateAction(
 ) {
 
     override fun toString(): String {
-        return "($state | $action)"
+        return "($state\t|\t$action)"
     }
 }
 
@@ -59,19 +58,16 @@ class OffloadingLPCreator(
 
     private fun getObjectiveEquation(): EquationRow {
         var rhsObjective = 0.0
-        for (queueIndex in 0 until systemConfig.numberOfQueues) {
-            rhsObjective += -expectedTaskTime(queueIndex)
-        }
 
         val coefficients = mutableListOfZeros(indexMapping.variableCount)
 
-        indexMapping.coefficientIndexByStateAction.forEach { (stateAction: StateAction, index: Int) ->
-            var coefficientValue = 0.0
-            stateAction.state.taskQueueLengths.forEach { value ->
-                coefficientValue += value / systemConfig.taskQueueCapacity
+        for (queueIndex in 0 until systemConfig.numberOfQueues) {
+            val queuePrescaler = (systemConfig.alpha[queueIndex] / systemConfig.totalAlpha)
+            rhsObjective -= queuePrescaler * systemConfig.expectedTaskTime(queueIndex)
+            indexMapping.coefficientIndexByStateAction.forEach { (stateAction: StateAction, index: Int) ->
+                val taskQueueLength = stateAction.state.taskQueueLengths[queueIndex]
+                coefficients[index] += queuePrescaler * (taskQueueLength / systemConfig.alpha[queueIndex])
             }
-
-            coefficients[index] = coefficientValue
         }
 
         return EquationRow(
@@ -79,12 +75,6 @@ class OffloadingLPCreator(
             rhs = rhsObjective,
             type = EquationRow.Type.Objective
         )
-    }
-
-    private fun expectedTaskTime(queueIndex: Int): Double {
-        val eta: Double = systemConfig.eta[queueIndex]
-        val numberOfSections: Int = systemConfig.cpuNumberOfSections[queueIndex]
-        return (eta * numberOfSections + (1 - eta) * systemConfig.expectedTCloud(queueIndex))
     }
 
     private fun getEquation2(): EquationRow {
@@ -98,11 +88,11 @@ class OffloadingLPCreator(
             val (state, action) = stateAction
             var coefficientValue = 0.0
 
-            if (state.tuState > 0 || (action is Action.AddToTransmissionUnit || action is Action.AddToBothUnits)) {
+            if (state.isTUActive() || (action is Action.AddToTransmissionUnit || action is Action.AddToBothUnits)) {
                 coefficientValue += beta * pTx
             }
 
-            if (state.cpuState > 0 || (action is Action.AddToCPU) || (action is Action.AddToBothUnits)) {
+            if (state.isCPUActive() || (action is Action.AddToCPU) || (action is Action.AddToBothUnits)) {
                 coefficientValue += pLoc
             }
 
@@ -147,7 +137,7 @@ class OffloadingLPCreator(
                 is Action.AddToBothUnits -> {
                     var temp = 0.0
                     if (action.cpuTaskQueueIndex == queueIndex) {
-                        temp += (1.0 -systemConfig.eta[queueIndex])
+                        temp += (1.0 - systemConfig.eta[queueIndex])
                     }
                     if (action.transmissionUnitTaskQueueIndex == queueIndex) {
                         temp += -systemConfig.eta[queueIndex]
@@ -236,7 +226,7 @@ class OffloadingLPCreator(
     }
 
     fun createOffloadingLinearProgram(): OffloadingLinearProgram {
-        allStates = systemConfig.stateConfig.allStates()
+        allStates = userEquipmentStateManager.allStates()
         indexMapping = createIndexMapping()
         discreteTimeMarkovChain = dtmcCreator.create()
         itCalculator = IndependentTransitionCalculator(symbolMapping, discreteTimeMarkovChain)
@@ -286,7 +276,7 @@ class OffloadingLPCreator(
     }
 
     fun createOffloadingLinearProgramExcludingEquation4(): OffloadingLinearProgram {
-        allStates = systemConfig.stateConfig.allStates()
+        allStates = userEquipmentStateManager.allStates()
         indexMapping = createIndexMapping()
         // discreteTimeMarkovChain = dtmcCreator.create()
         // itCalculator = IndependentTransitionCalculator(symbolMapping, discreteTimeMarkovChain)
@@ -297,7 +287,7 @@ class OffloadingLPCreator(
             add(getObjectiveEquation())
             add(getEquation2())
             addAll(getEquations3())
-            for (i in 1..systemConfig.stateCount()) {
+            repeat(allStates.size) {
                 add(null)
             }
             add(getEquation5())

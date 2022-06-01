@@ -8,7 +8,6 @@ import simulation.logger.Event
 import simulation.logger.Logger
 import core.policy.Action
 import core.ue.UserEquipmentState
-import core.ue.UserEquipmentState.Companion.validate
 import core.withProbability
 import ue.UserEquipmentTimingInfoProvider
 import kotlin.random.Random
@@ -20,11 +19,7 @@ class UserEquipment(
     private val stateManager = UserEquipmentStateManager(config.getStateManagerConfig())
 
 
-    var state: UserEquipmentState = UserEquipmentState(0, 0, 0)
-        set(value) {
-            value.validate()
-            field = value
-        }
+    var state: UserEquipmentState = stateManager.getInitialState()
     var logger: Logger? = null
 
     var timeSlot: Int = 0
@@ -50,12 +45,15 @@ class UserEquipment(
 
     private fun executeAction(action: Action) {
         val startState = state
+        if (action is Action.AddToTransmissionUnit) {
+            val hello = 2
+        }
         state = stateManager.getNextStateRunningAction(state, action)
-        logger?.addLogsFromStateAction(startState, action)
 
         // 2. Advance UE components
         advanceComponents()
 
+        logger?.addLogsFromStateAction(startState, state, action)
         // 3. Add new task with probability alpha
         handleTaskArrival()
     }
@@ -89,19 +87,6 @@ class UserEquipment(
         }
     }
 
-    fun addTasks() {
-        try {
-            state = stateManager.addTaskNextState(state)
-            arrivedTaskCount++
-            val id = arrivedTaskCount
-            logger?.log(Event.TaskArrival(id, timingInfoProvider.getCurrentTimeslot()))
-        } catch (e: UserEquipmentStateManager.TaskQueueFullException) {
-            // System.err.println("Warning! Max queue capacity was reached. Dropping task.")
-            // logger?.log(Event.TaskDropped(-1, timingInfoProvider.getCurrentTimeslot()))
-            droppedTasks += 1
-        }
-    }
-
     private fun advanceCPU() {
         state = stateManager.getNextStateAdvancingCPU(state)
         consumedPower += config.pLoc
@@ -109,18 +94,12 @@ class UserEquipment(
 
     private fun advanceTU() {
         state = stateManager.getNextStateAdvancingTU(state)
-        if (state.isTUActive()) {
-            logger?.logTaskTransmittedByTU()
-        }
         consumedPower += config.pTx
     }
 
     fun reset() {
-        state = UserEquipmentState(0, 0, 0)
-        cpuTaskId = -1
-        tuTaskId = -1
-        arrivedTaskCount = 0
-        lastUsedId = 0
+        state = stateManager.getInitialState()
+        logger?.reset()
         consumedPower = 0.0
         timeSlot = 0
     }

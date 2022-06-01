@@ -9,12 +9,12 @@ class OffloadingLPCreatorTestsV2 {
             tRx = 0,
         )
         val userEquipmentConfig = UserEquipmentConfig(
-            stateConfig = UserEquipmentStateConfig(
+            stateConfig = UserEquipmentStateConfig.singleQueue(
                 taskQueueCapacity = 2,
                 tuNumberOfPackets = 1,
                 cpuNumberOfSections = 2
             ),
-            componentsConfig = UserEquipmentComponentsConfig(
+            componentsConfig = UserEquipmentComponentsConfig.singleQueue(
                 alpha = 0.30,
                 beta = 0.4,
                 eta = 0.2,
@@ -28,9 +28,9 @@ class OffloadingLPCreatorTestsV2 {
             environmentParameters = environmentParameters,
             allActions = setOf(
                 Action.NoOperation,
-                Action.AddToCPU,
-                Action.AddToTransmissionUnit,
-                Action.AddToBothUnits
+                Action.AddToCPU.singleQueue(),
+                Action.AddToTransmissionUnit.singleQueue(),
+                Action.AddToBothUnits.singleQueue()
             )
         )
 

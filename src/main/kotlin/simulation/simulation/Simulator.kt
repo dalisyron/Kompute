@@ -1,5 +1,6 @@
 package simulation.simulation
 
+import core.policy.Action
 import simulation.logger.Logger
 import core.policy.Policy
 import simulation.ue.UserEquipment
@@ -13,9 +14,10 @@ class Simulator(
     private val userEquipment: UserEquipment = UserEquipment(this, systemConfig)
     private val simulationReportCreator: SimulationReportCreator = SimulationReportCreator(systemConfig)
     private var clock: Int = 0
-    private val logger = Logger()
+    private val logger = Logger(this)
 
     fun simulatePolicy(policy: Policy, numberOfTimeSlots: Int): SimulationReport {
+        println("Start simulation for $policy")
         userEquipment.reset()
         logger.reset()
         userEquipment.logger = logger
@@ -25,6 +27,9 @@ class Simulator(
         runFor(numberOfTimeSlots) {
             val action = policy.getActionForState(userEquipment.getUserEquipmentExecutionState())
             val oldState = userEquipment.state
+            if (action is Action.AddToTransmissionUnit) {
+                val a = 23
+            }
             userEquipment.tick(action)
             val progress = clock.toDouble() / numberOfTimeSlots.toDouble()
         }

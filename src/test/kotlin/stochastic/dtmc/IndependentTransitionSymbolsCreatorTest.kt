@@ -22,15 +22,15 @@ class IndependentTransitionCalculatorTest {
             tRx = 0.0,
         )
         val userEquipmentConfig = UserEquipmentConfig(
-            stateConfig = UserEquipmentStateConfig(
+            stateConfig = UserEquipmentStateConfig.singleQueue(
                 taskQueueCapacity = 5,
                 tuNumberOfPackets = 4,
                 cpuNumberOfSections = 3
             ),
-            componentsConfig = UserEquipmentComponentsConfig(
+            componentsConfig = UserEquipmentComponentsConfig.singleQueue(
                 alpha = 0.1,
                 beta = 0.9,
-                eta = 0.0, // Not used in the baseline policies, set to whatever
+                etaConfig = 0.0, // Not used in the baseline policies, set to whatever
                 pTx = 1.5,
                 pLocal = 1.5,
                 pMax = 500.0
@@ -38,27 +38,19 @@ class IndependentTransitionCalculatorTest {
         )
         val systemCofig = OffloadingSystemConfig(
             userEquipmentConfig = userEquipmentConfig,
-            environmentParameters = environmentParameters,
-            allActions = setOf(
-                Action.NoOperation,
-                Action.AddToCPU,
-                Action.AddToTransmissionUnit,
-                Action.AddToBothUnits
-            )
+            environmentParameters = environmentParameters
         )
 
         return systemCofig
     }
 
     fun getSymbolMapping(systemConfig: OffloadingSystemConfig): Map<Symbol, Double> {
-        val symbolMapping: Map<Symbol, Double> = run {
-            mapOf(
-                ParameterSymbol.Beta to systemConfig.beta,
-                ParameterSymbol.BetaC to 1.0 - systemConfig.beta,
-                ParameterSymbol.Alpha to systemConfig.alpha,
-                ParameterSymbol.AlphaC to 1.0 - systemConfig.alpha
-            )
-        }
+        val symbolMapping: Map<Symbol, Double> = mapOf(
+            ParameterSymbol.Beta to systemConfig.beta,
+            ParameterSymbol.BetaC to 1.0 - systemConfig.beta,
+            ParameterSymbol.Alpha.singleQueue() to systemConfig.alpha.first(),
+            ParameterSymbol.AlphaC.singleQueue() to 1.0 - systemConfig.alpha.first()
+        )
         return symbolMapping
     }
 
@@ -71,12 +63,12 @@ class IndependentTransitionCalculatorTest {
         val transitionCalculator = IndependentTransitionCalculator(symbolMapping, discreteTimeMarkovChain)
 
         val itValue = transitionCalculator.getIndependentTransitionFraction(
-            UserEquipmentState(2, 0, 0),
-            UserEquipmentState(1, 1, 0),
-            Action.AddToTransmissionUnit
+            UserEquipmentState.singleQueue(2, 0, 0),
+            UserEquipmentState.singleQueue(1, 1, 0),
+            Action.AddToTransmissionUnit.singleQueue()
         )
 
-        val expectedResult = (1.0 - systemConfig.beta) * (1.0 - systemConfig.alpha)
+        val expectedResult = (1.0 - systemConfig.beta) * (1.0 - systemConfig.alpha.first())
 
         assertThat(itValue)
             .isWithin(1e-6)
@@ -85,7 +77,7 @@ class IndependentTransitionCalculatorTest {
 
     @Test
     fun testDoubleLabel() {
-        val stateConfig = UserEquipmentStateConfig(
+        val stateConfig = UserEquipmentStateConfig.singleQueue(
             taskQueueCapacity = 10, // set to some big number,
             tuNumberOfPackets = 1,
             cpuNumberOfSections = 17
@@ -98,11 +90,11 @@ class IndependentTransitionCalculatorTest {
         val itCalculator = IndependentTransitionCalculator(symbolMapping, discreteTimeMarkovChain)
 
         val itValue = itCalculator.getIndependentTransitionFraction(
-            source = UserEquipmentState(1, 0, 0),
-            dest = UserEquipmentState(1, 0, 0),
-            action = Action.AddToTransmissionUnit
+            source = UserEquipmentState.singleQueue(1, 0, 0),
+            dest = UserEquipmentState.singleQueue(1, 0, 0),
+            action = Action.AddToTransmissionUnit.singleQueue()
         )
-        val expectedValue = systemConfig.alpha * systemConfig.beta
+        val expectedValue = systemConfig.alpha.first() * systemConfig.beta
 
         assertThat(itValue)
             .isWithin(1e-6)

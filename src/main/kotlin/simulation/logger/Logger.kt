@@ -6,9 +6,9 @@ import core.ue.UserEquipmentState
 import ue.UserEquipmentTimingInfoProvider
 
 class Logger(
-    val events: MutableList<Event> = mutableListOf(),
     private val timingInfoProvider: UserEquipmentTimingInfoProvider
 ) {
+    val events: MutableList<Event> = mutableListOf()
     var cpuTaskId: Int = -1
     var tuTaskId: Int = -1
     var arrivedTaskCount: Int = 0
@@ -27,7 +27,8 @@ class Logger(
         events.add(event)
     }
 
-    fun addLogsFromStateAction(sourceState: UserEquipmentState, action: Action) {
+    fun addLogsFromStateAction(sourceState: UserEquipmentState, endState: UserEquipmentState, action: Action) {
+        // println("$sourceState | $endState | $action")
         when (action) {
             is Action.NoOperation -> {
             }
@@ -42,6 +43,13 @@ class Logger(
                 logAddToCPU(action.cpuTaskQueueIndex)
             }
         }
+
+        if (endState.cpuState < sourceState.cpuState) {
+            logTaskProcessedByCPU()
+        }
+        if ((sourceState.tuState > 0 || action is Action.AddToTransmissionUnit || action is Action.AddToBothUnits) && endState.tuState == 0) {
+            logTaskTransmittedByTU()
+        }
     }
 
     private fun logAddToCPU(taskTypeQueueIndex: Int) {
@@ -52,17 +60,24 @@ class Logger(
     }
 
     private fun logAddToTransmissionUnit(taskTypeQueueIndex: Int) {
-        check(tuTaskId == -1)
+        check(tuTaskId == -1) {
+            tuTaskId
+        }
         tuTaskId = makeNewId()
         log(Event.TaskSentToTU(tuTaskId, timingInfoProvider.getCurrentTimeslot(), taskTypeQueueIndex))
     }
 
     fun reset() {
+        cpuTaskId = -1
+        tuTaskId = -1
+        arrivedTaskCount = 0
+        lastUsedId = 0
         events.clear()
     }
 
     fun logTaskTransmittedByTU() {
         log(Event.TaskTransmittedByTU(tuTaskId, timingInfoProvider.getCurrentTimeslot() + 1))
+        println("transmitted $tuTaskId")
         tuTaskId = -1
     }
 
@@ -74,7 +89,7 @@ class Logger(
     fun logAddNewTask(queueIndex: Int) {
         arrivedTaskCount++
         val id = arrivedTaskCount
-        log(Event.TaskArrival(id, timingInfoProvider.getCurrentTimeslot()))
+        log(Event.TaskArrival(id, timingInfoProvider.getCurrentTimeslot(), queueIndex))
     }
 
     fun logTaskDropped(queueIndex: Int) {

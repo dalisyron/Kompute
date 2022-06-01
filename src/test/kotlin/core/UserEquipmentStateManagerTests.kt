@@ -13,7 +13,7 @@ class UserEquipmentStateManagerTests {
 
     fun getSystemConfig(userEquipmentStateConfig: UserEquipmentStateConfig): OffloadingSystemConfig {
         val systemConfig = Mock.configFromLiyu().withUserEquipmentStateConfig(
-            UserEquipmentStateConfig(
+            UserEquipmentStateConfig.singleQueue(
                 taskQueueCapacity = 1000, // set to some big number,
                 tuNumberOfPackets = 1,
                 cpuNumberOfSections = 17
@@ -26,28 +26,28 @@ class UserEquipmentStateManagerTests {
     fun testGetEdges() {
         val creator = UserEquipmentStateManager(
             StateManagerConfig(
-                UserEquipmentStateConfig(
+                UserEquipmentStateConfig.singleQueue(
                     taskQueueCapacity = 1000, // set to some big number,
                     tuNumberOfPackets = 1,
                     cpuNumberOfSections = 17
                 ),
-                StateManagerConfig.Limitation.None
+                listOf(StateManagerConfig.Limitation.None)
             )
         )
 
-        val edges = creator.getEdgesForState(UserEquipmentState(1, 0, 0))
+        val edges = creator.getEdgesForState(UserEquipmentState.singleQueue(1, 0, 0))
 
         Truth.assertThat(edges.map { it.dest })
             .containsExactlyElementsIn(
                 listOf(
-                    UserEquipmentState(0, 1, 0),
-                    UserEquipmentState(0, 0, 0),
-                    UserEquipmentState(0, 0, 1),
-                    UserEquipmentState(1, 0, 0), // No-Op
-                    UserEquipmentState(1, 0, 0), // No-Op
-                    UserEquipmentState(1, 1, 0),
-                    UserEquipmentState(1, 0, 1),
-                    UserEquipmentState(2, 0, 0), // No-Op
+                    UserEquipmentState.singleQueue(0, 1, 0),
+                    UserEquipmentState.singleQueue(0, 0, 0),
+                    UserEquipmentState.singleQueue(0, 0, 1),
+                    UserEquipmentState.singleQueue(1, 0, 0), // No-Op
+                    UserEquipmentState.singleQueue(1, 0, 0), // No-Op
+                    UserEquipmentState.singleQueue(1, 1, 0),
+                    UserEquipmentState.singleQueue(1, 0, 1),
+                    UserEquipmentState.singleQueue(2, 0, 0), // No-Op
                 )
             )
     }
@@ -55,28 +55,29 @@ class UserEquipmentStateManagerTests {
     @Test
     fun testGetEdges2() {
         val stateManager = UserEquipmentStateManager(
-            StateManagerConfig(
-                UserEquipmentStateConfig(
+            StateManagerConfig.singleQueue(
+                UserEquipmentStateConfig.singleQueue(
                     taskQueueCapacity = 5, // set to some big number,
                     tuNumberOfPackets = 5,
                     cpuNumberOfSections = 8
-                )
+                ),
+                limitation = StateManagerConfig.Limitation.None
             )
         )
 
-        val edges = stateManager.getUniqueEdgesForState(UserEquipmentState(4, 2, 0))
+        val edges = stateManager.getUniqueEdgesForState(UserEquipmentState.singleQueue(4, 2, 0))
 
         Truth.assertThat(edges.map { it.dest })
             .containsExactlyElementsIn(
                 listOf(
-                    UserEquipmentState(4, 2, 0),
-                    UserEquipmentState(3, 2, 1),
-                    UserEquipmentState(4, 3, 0),
-                    UserEquipmentState(3, 3, 1),
-                    UserEquipmentState(5, 2, 0),
-                    UserEquipmentState(4, 2, 1),
-                    UserEquipmentState(5, 3, 0),
-                    UserEquipmentState(4, 3, 1),
+                    UserEquipmentState.singleQueue(4, 2, 0),
+                    UserEquipmentState.singleQueue(3, 2, 1),
+                    UserEquipmentState.singleQueue(4, 3, 0),
+                    UserEquipmentState.singleQueue(3, 3, 1),
+                    UserEquipmentState.singleQueue(5, 2, 0),
+                    UserEquipmentState.singleQueue(4, 2, 1),
+                    UserEquipmentState.singleQueue(5, 3, 0),
+                    UserEquipmentState.singleQueue(4, 3, 1),
                 )
             )
     }
@@ -84,26 +85,27 @@ class UserEquipmentStateManagerTests {
     @Test
     fun testGetEdges3() {
         val stateManager = UserEquipmentStateManager(
-            StateManagerConfig(
-                UserEquipmentStateConfig(
+            StateManagerConfig.singleQueue(
+                UserEquipmentStateConfig.singleQueue(
                     taskQueueCapacity = 4, // set to some big number,
                     tuNumberOfPackets = 5,
                     cpuNumberOfSections = 8
-                )
+                ),
+                StateManagerConfig.Limitation.None
             )
         )
 
-        val edges = stateManager.getUniqueEdgesForState(UserEquipmentState(4, 2, 0))
+        val edges = stateManager.getUniqueEdgesForState(UserEquipmentState.singleQueue(4, 2, 0))
 
         assertThat(edges.map { it.dest })
             .containsExactlyElementsIn(
                 listOf(
-                    UserEquipmentState(4, 2, 0),
-                    UserEquipmentState(3, 2, 1),
-                    UserEquipmentState(4, 3, 0),
-                    UserEquipmentState(3, 3, 1),
-                    UserEquipmentState(4, 2, 1),
-                    UserEquipmentState(4, 3, 1),
+                    UserEquipmentState.singleQueue(4, 2, 0),
+                    UserEquipmentState.singleQueue(3, 2, 1),
+                    UserEquipmentState.singleQueue(4, 3, 0),
+                    UserEquipmentState.singleQueue(3, 3, 1),
+                    UserEquipmentState.singleQueue(4, 2, 1),
+                    UserEquipmentState.singleQueue(4, 3, 1),
                 )
             )
     }
@@ -111,32 +113,33 @@ class UserEquipmentStateManagerTests {
     @Test
     fun testGetEdges4() {
         val stateManager = UserEquipmentStateManager(
-            StateManagerConfig(
-                UserEquipmentStateConfig(
+            StateManagerConfig.singleQueue(
+                UserEquipmentStateConfig.singleQueue(
                     taskQueueCapacity = 10, // set to some big number,
                     tuNumberOfPackets = 5,
                     cpuNumberOfSections = 8
-                )
+                ),
+                limitation = StateManagerConfig.Limitation.None
             )
         )
 
-        val edges = stateManager.getUniqueEdgesForState(UserEquipmentState(4, 0, 0))
+        val edges = stateManager.getUniqueEdgesForState(UserEquipmentState.singleQueue(4, 0, 0))
 
         assertThat(edges.map { it.dest })
             .containsExactlyElementsIn(
                 listOf(
-                    UserEquipmentState(4, 0, 0),
-                    UserEquipmentState(3, 0, 1),
-                    UserEquipmentState(3, 1, 0),
-                    UserEquipmentState(3, 2, 0),
-                    UserEquipmentState(2, 1, 1),
-                    UserEquipmentState(2, 2, 1),
-                    UserEquipmentState(5, 0, 0),
-                    UserEquipmentState(4, 0, 1),
-                    UserEquipmentState(4, 1, 0),
-                    UserEquipmentState(4, 2, 0),
-                    UserEquipmentState(3, 1, 1),
-                    UserEquipmentState(3, 2, 1),
+                    UserEquipmentState.singleQueue(4, 0, 0),
+                    UserEquipmentState.singleQueue(3, 0, 1),
+                    UserEquipmentState.singleQueue(3, 1, 0),
+                    UserEquipmentState.singleQueue(3, 2, 0),
+                    UserEquipmentState.singleQueue(2, 1, 1),
+                    UserEquipmentState.singleQueue(2, 2, 1),
+                    UserEquipmentState.singleQueue(5, 0, 0),
+                    UserEquipmentState.singleQueue(4, 0, 1),
+                    UserEquipmentState.singleQueue(4, 1, 0),
+                    UserEquipmentState.singleQueue(4, 2, 0),
+                    UserEquipmentState.singleQueue(3, 1, 1),
+                    UserEquipmentState.singleQueue(3, 2, 1),
                 )
             )
     }
@@ -144,24 +147,25 @@ class UserEquipmentStateManagerTests {
     @Test
     fun testGetEdges6() {
         val stateManager = UserEquipmentStateManager(
-            StateManagerConfig(
-                UserEquipmentStateConfig(
+            StateManagerConfig.singleQueue(
+                UserEquipmentStateConfig.singleQueue(
                     taskQueueCapacity = 10, // set to some big number,
                     tuNumberOfPackets = 5,
                     cpuNumberOfSections = 8
-                )
+                ),
+                limitation = StateManagerConfig.Limitation.None
             )
         )
 
-        val edges = stateManager.getUniqueEdgesForState(UserEquipmentState(4, 3, 2))
+        val edges = stateManager.getUniqueEdgesForState(UserEquipmentState.singleQueue(4, 3, 2))
 
         assertThat(edges.map { it.dest })
             .containsExactlyElementsIn(
                 listOf(
-                    UserEquipmentState(4, 3, 3),
-                    UserEquipmentState(4, 4, 3),
-                    UserEquipmentState(5, 3, 3),
-                    UserEquipmentState(5, 4, 3),
+                    UserEquipmentState.singleQueue(4, 3, 3),
+                    UserEquipmentState.singleQueue(4, 4, 3),
+                    UserEquipmentState.singleQueue(5, 3, 3),
+                    UserEquipmentState.singleQueue(5, 4, 3),
                 )
             )
     }

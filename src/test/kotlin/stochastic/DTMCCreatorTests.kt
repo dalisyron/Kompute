@@ -13,57 +13,57 @@ import core.ue.UserEquipmentState
 import core.ue.UserEquipmentStateConfig
 
 internal class DTMCCreatorTests {
-    private val sampleStateConfig1 = UserEquipmentStateConfig(
+    private val sampleStateConfig1 = UserEquipmentStateConfig.singleQueue(
         taskQueueCapacity = 5,
         tuNumberOfPackets = 4,
         cpuNumberOfSections = 3
     )
-    private var creator: DTMCCreator = DTMCCreator(StateManagerConfig(sampleStateConfig1))
+    private var creator: DTMCCreator = DTMCCreator(StateManagerConfig.singleQueue(sampleStateConfig1, StateManagerConfig.Limitation.None))
 
 
     @Test
     fun testSingleTaskIdleComponentsDestinations() {
         val chain = creator.create()
 
-        val edges = chain.adjacencyList[UserEquipmentState(1, 0, 0)]!!
+        val edges = chain.adjacencyList[UserEquipmentState.singleQueue(1, 0, 0)]!!
 
         assertThat(edges.map { it.dest })
             .containsExactlyElementsIn(
                 listOf(
-                    UserEquipmentState(0, 1, 0),
-                    UserEquipmentState(0, 0, 1),
-                    UserEquipmentState(0, 2, 0),
-                    UserEquipmentState(1, 0, 0), // No-Op
-                    UserEquipmentState(1, 1, 0),
-                    UserEquipmentState(1, 0, 1),
-                    UserEquipmentState(1, 2, 0),
-                    UserEquipmentState(2, 0, 0), // No-Op
+                    UserEquipmentState.singleQueue(0, 1, 0),
+                    UserEquipmentState.singleQueue(0, 0, 1),
+                    UserEquipmentState.singleQueue(0, 2, 0),
+                    UserEquipmentState.singleQueue(1, 0, 0), // No-Op
+                    UserEquipmentState.singleQueue(1, 1, 0),
+                    UserEquipmentState.singleQueue(1, 0, 1),
+                    UserEquipmentState.singleQueue(1, 2, 0),
+                    UserEquipmentState.singleQueue(2, 0, 0), // No-Op
                 )
             )
     }
 
     @Test
     fun testSingleTaskForSingleTU() {
-        val config = UserEquipmentStateConfig(
+        val config = UserEquipmentStateConfig.singleQueue(
             taskQueueCapacity = 1000, // set to some big number,
             tuNumberOfPackets = 1,
             cpuNumberOfSections = 17
         )
-        val creatorTemp = DTMCCreator(StateManagerConfig(config))
+        val creatorTemp = DTMCCreator(StateManagerConfig.singleQueue(config))
         val chain = creatorTemp.create()
 
-        val edges = chain.adjacencyList[UserEquipmentState(1, 0, 0)]!!
+        val edges = chain.adjacencyList[UserEquipmentState.singleQueue(1, 0, 0)]!!
 
         assertThat(edges.map { it.dest })
             .containsExactlyElementsIn(
                 listOf(
-                    UserEquipmentState(0, 1, 0),
-                    UserEquipmentState(0, 0, 0),
-                    UserEquipmentState(0, 0, 1),
-                    UserEquipmentState(1, 0, 0),
-                    UserEquipmentState(1, 1, 0),
-                    UserEquipmentState(1, 0, 1),
-                    UserEquipmentState(2, 0, 0),
+                    UserEquipmentState.singleQueue(0, 1, 0),
+                    UserEquipmentState.singleQueue(0, 0, 0),
+                    UserEquipmentState.singleQueue(0, 0, 1),
+                    UserEquipmentState.singleQueue(1, 0, 0),
+                    UserEquipmentState.singleQueue(1, 1, 0),
+                    UserEquipmentState.singleQueue(1, 0, 1),
+                    UserEquipmentState.singleQueue(2, 0, 0),
                 )
             )
     }
@@ -72,7 +72,7 @@ internal class DTMCCreatorTests {
     fun testSingleTaskIdleComponentsSymbols() {
         val chain = creator.create()
 
-        val edges = chain.adjacencyList[UserEquipmentState(1, 0, 0)]!!
+        val edges = chain.adjacencyList[UserEquipmentState.singleQueue(1, 0, 0)]!!
 
         fun assertSymbolsEqualForState(state: UserEquipmentState, list: List<Symbol>) {
 
@@ -84,44 +84,44 @@ internal class DTMCCreatorTests {
         }
 
         assertSymbolsEqualForState(
-            UserEquipmentState(0, 1, 0),
-            listOf(Action.AddToTransmissionUnit, ParameterSymbol.AlphaC, ParameterSymbol.BetaC)
+            UserEquipmentState.singleQueue(0, 1, 0),
+            listOf(Action.AddToTransmissionUnit.singleQueue(), ParameterSymbol.AlphaC.singleQueue(), ParameterSymbol.BetaC)
         )
 
         assertSymbolsEqualForState(
-            UserEquipmentState(0, 0, 1),
-            listOf(Action.AddToCPU, ParameterSymbol.AlphaC)
+            UserEquipmentState.singleQueue(0, 0, 1),
+            listOf(Action.AddToCPU.singleQueue(), ParameterSymbol.AlphaC.singleQueue())
         )
 
         assertSymbolsEqualForState(
-            UserEquipmentState(0, 2, 0),
-            listOf(Action.AddToTransmissionUnit, ParameterSymbol.AlphaC, ParameterSymbol.Beta)
+            UserEquipmentState.singleQueue(0, 2, 0),
+            listOf(Action.AddToTransmissionUnit.singleQueue(), ParameterSymbol.AlphaC.singleQueue(), ParameterSymbol.Beta)
         )
 
         assertSymbolsEqualForState(
-            UserEquipmentState(1, 0, 0),
-            listOf(Action.NoOperation, ParameterSymbol.AlphaC)
+            UserEquipmentState.singleQueue(1, 0, 0),
+            listOf(Action.NoOperation, ParameterSymbol.AlphaC.singleQueue())
         )
 
 
         assertSymbolsEqualForState(
-            UserEquipmentState(1, 1, 0),
-            listOf(Action.AddToTransmissionUnit, ParameterSymbol.Alpha, ParameterSymbol.BetaC)
+            UserEquipmentState.singleQueue(1, 1, 0),
+            listOf(Action.AddToTransmissionUnit.singleQueue(), ParameterSymbol.Alpha.singleQueue(), ParameterSymbol.BetaC)
         )
 
         assertSymbolsEqualForState(
-            UserEquipmentState(1, 0, 1),
-            listOf(Action.AddToCPU, ParameterSymbol.Alpha)
+            UserEquipmentState.singleQueue(1, 0, 1),
+            listOf(Action.AddToCPU.singleQueue(), ParameterSymbol.Alpha.singleQueue())
         )
 
         assertSymbolsEqualForState(
-            UserEquipmentState(1, 2, 0),
-            listOf(Action.AddToTransmissionUnit, ParameterSymbol.Alpha, ParameterSymbol.Beta)
+            UserEquipmentState.singleQueue(1, 2, 0),
+            listOf(Action.AddToTransmissionUnit.singleQueue(), ParameterSymbol.Alpha.singleQueue(), ParameterSymbol.Beta)
         )
 
         assertSymbolsEqualForState(
-            UserEquipmentState(2, 0, 0),
-            listOf(Action.NoOperation, ParameterSymbol.Alpha)
+            UserEquipmentState.singleQueue(2, 0, 0),
+            listOf(Action.NoOperation, ParameterSymbol.Alpha.singleQueue())
         )
     }
 
@@ -142,8 +142,8 @@ internal class DTMCCreatorTests {
     @Test
     fun testSymbols4() {
         val creatorTemp = DTMCCreator(
-            StateManagerConfig(
-                UserEquipmentStateConfig(
+            StateManagerConfig.singleQueue(
+                UserEquipmentStateConfig.singleQueue(
                     taskQueueCapacity = 10, // set to some big number,
                     tuNumberOfPackets = 5,
                     cpuNumberOfSections = 8
@@ -153,7 +153,7 @@ internal class DTMCCreatorTests {
 
         val chain = creatorTemp.create()
 
-        val edges = chain.adjacencyList[UserEquipmentState(4, 0, 0)]!!
+        val edges = chain.adjacencyList[UserEquipmentState.singleQueue(4, 0, 0)]!!
 
         fun assertSymbolsEqualForState(state: UserEquipmentState, list: List<Symbol>) {
 
@@ -166,60 +166,60 @@ internal class DTMCCreatorTests {
 
 
         assertSymbolsEqualForState(
-            UserEquipmentState(4, 0, 0),
-            listOf(ParameterSymbol.AlphaC, Action.NoOperation)
+            UserEquipmentState.singleQueue(4, 0, 0),
+            listOf(ParameterSymbol.AlphaC.singleQueue(), Action.NoOperation)
         )
         assertSymbolsEqualForState(
-            UserEquipmentState(3, 0, 1),
-            listOf(ParameterSymbol.AlphaC, Action.AddToCPU)
+            UserEquipmentState.singleQueue(3, 0, 1),
+            listOf(ParameterSymbol.AlphaC.singleQueue(), Action.AddToCPU.singleQueue())
         )
         assertSymbolsEqualForState(
-            UserEquipmentState(3, 1, 0),
-            listOf(ParameterSymbol.AlphaC, Action.AddToTransmissionUnit, ParameterSymbol.BetaC)
+            UserEquipmentState.singleQueue(3, 1, 0),
+            listOf(ParameterSymbol.AlphaC.singleQueue(), Action.AddToTransmissionUnit.singleQueue(), ParameterSymbol.BetaC)
         )
         assertSymbolsEqualForState(
-            UserEquipmentState(3, 2, 0),
-            listOf(ParameterSymbol.AlphaC, Action.AddToTransmissionUnit, ParameterSymbol.Beta)
+            UserEquipmentState.singleQueue(3, 2, 0),
+            listOf(ParameterSymbol.AlphaC.singleQueue(), Action.AddToTransmissionUnit.singleQueue(), ParameterSymbol.Beta)
         )
         assertSymbolsEqualForState(
-            UserEquipmentState(2, 1, 1),
-            listOf(ParameterSymbol.AlphaC, Action.AddToBothUnits, ParameterSymbol.BetaC)
+            UserEquipmentState.singleQueue(2, 1, 1),
+            listOf(ParameterSymbol.AlphaC.singleQueue(), Action.AddToBothUnits.singleQueue(), ParameterSymbol.BetaC)
         )
         assertSymbolsEqualForState(
-            UserEquipmentState(2, 2, 1),
-            listOf(ParameterSymbol.AlphaC, Action.AddToBothUnits, ParameterSymbol.Beta)
+            UserEquipmentState.singleQueue(2, 2, 1),
+            listOf(ParameterSymbol.AlphaC.singleQueue(), Action.AddToBothUnits.singleQueue(), ParameterSymbol.Beta)
         )
         assertSymbolsEqualForState(
-            UserEquipmentState(5, 0, 0),
-            listOf(ParameterSymbol.Alpha, Action.NoOperation)
+            UserEquipmentState.singleQueue(5, 0, 0),
+            listOf(ParameterSymbol.Alpha.singleQueue(), Action.NoOperation)
         )
         assertSymbolsEqualForState(
-            UserEquipmentState(4, 0, 1),
-            listOf(ParameterSymbol.Alpha, Action.AddToCPU)
+            UserEquipmentState.singleQueue(4, 0, 1),
+            listOf(ParameterSymbol.Alpha.singleQueue(), Action.AddToCPU.singleQueue())
         )
         assertSymbolsEqualForState(
-            UserEquipmentState(4, 1, 0),
-            listOf(ParameterSymbol.Alpha, Action.AddToTransmissionUnit, ParameterSymbol.BetaC)
+            UserEquipmentState.singleQueue(4, 1, 0),
+            listOf(ParameterSymbol.Alpha.singleQueue(), Action.AddToTransmissionUnit.singleQueue(), ParameterSymbol.BetaC)
         )
         assertSymbolsEqualForState(
-            UserEquipmentState(4, 2, 0),
-            listOf(ParameterSymbol.Alpha, Action.AddToTransmissionUnit, ParameterSymbol.Beta)
+            UserEquipmentState.singleQueue(4, 2, 0),
+            listOf(ParameterSymbol.Alpha.singleQueue(), Action.AddToTransmissionUnit.singleQueue(), ParameterSymbol.Beta)
         )
         assertSymbolsEqualForState(
-            UserEquipmentState(3, 1, 1),
-            listOf(ParameterSymbol.Alpha, Action.AddToBothUnits, ParameterSymbol.BetaC)
+            UserEquipmentState.singleQueue(3, 1, 1),
+            listOf(ParameterSymbol.Alpha.singleQueue(), Action.AddToBothUnits.singleQueue(), ParameterSymbol.BetaC)
         )
         assertSymbolsEqualForState(
-            UserEquipmentState(3, 2, 1),
-            listOf(ParameterSymbol.Alpha, Action.AddToBothUnits, ParameterSymbol.Beta)
+            UserEquipmentState.singleQueue(3, 2, 1),
+            listOf(ParameterSymbol.Alpha.singleQueue(), Action.AddToBothUnits.singleQueue(), ParameterSymbol.Beta)
         )
     }
 
     @Test
     fun testSymbols5() {
         val creatorTemp = DTMCCreator(
-            StateManagerConfig(
-                UserEquipmentStateConfig(
+            StateManagerConfig.singleQueue(
+                UserEquipmentStateConfig.singleQueue(
                     taskQueueCapacity = 10, // set to some big number,
                     tuNumberOfPackets = 5,
                     cpuNumberOfSections = 8
@@ -229,7 +229,7 @@ internal class DTMCCreatorTests {
 
         val chain = creatorTemp.create()
 
-        val edges = chain.adjacencyList[UserEquipmentState(1, 0, 0)]!!
+        val edges = chain.adjacencyList[UserEquipmentState.singleQueue(1, 0, 0)]!!
 
         fun assertSymbolsEqualForState(state: UserEquipmentState, list: List<Symbol>) {
 
@@ -241,36 +241,36 @@ internal class DTMCCreatorTests {
         }
 
         assertSymbolsEqualForState(
-            UserEquipmentState(0, 1, 0),
-            listOf(ParameterSymbol.AlphaC, Action.AddToTransmissionUnit, ParameterSymbol.BetaC)
+            UserEquipmentState.singleQueue(0, 1, 0),
+            listOf(ParameterSymbol.AlphaC.singleQueue(), Action.AddToTransmissionUnit.singleQueue(), ParameterSymbol.BetaC)
         )
         assertSymbolsEqualForState(
-            UserEquipmentState(0, 0, 1),
-            listOf(ParameterSymbol.AlphaC, Action.AddToCPU)
+            UserEquipmentState.singleQueue(0, 0, 1),
+            listOf(ParameterSymbol.AlphaC.singleQueue(), Action.AddToCPU.singleQueue())
         )
         assertSymbolsEqualForState(
-            UserEquipmentState(0, 2, 0),
-            listOf(ParameterSymbol.AlphaC, Action.AddToTransmissionUnit, ParameterSymbol.Beta)
+            UserEquipmentState.singleQueue(0, 2, 0),
+            listOf(ParameterSymbol.AlphaC.singleQueue(), Action.AddToTransmissionUnit.singleQueue(), ParameterSymbol.Beta)
         )
         assertSymbolsEqualForState(
-            UserEquipmentState(1, 0, 0), // No-Op
-            listOf(ParameterSymbol.AlphaC, Action.NoOperation)
+            UserEquipmentState.singleQueue(1, 0, 0), // No-Op
+            listOf(ParameterSymbol.AlphaC.singleQueue(), Action.NoOperation)
         )
         assertSymbolsEqualForState(
-            UserEquipmentState(1, 1, 0),
-            listOf(ParameterSymbol.Alpha, Action.AddToTransmissionUnit, ParameterSymbol.BetaC)
+            UserEquipmentState.singleQueue(1, 1, 0),
+            listOf(ParameterSymbol.Alpha.singleQueue(), Action.AddToTransmissionUnit.singleQueue(), ParameterSymbol.BetaC)
         )
         assertSymbolsEqualForState(
-            UserEquipmentState(1, 0, 1),
-            listOf(ParameterSymbol.Alpha, Action.AddToCPU)
+            UserEquipmentState.singleQueue(1, 0, 1),
+            listOf(ParameterSymbol.Alpha.singleQueue(), Action.AddToCPU.singleQueue())
         )
         assertSymbolsEqualForState(
-            UserEquipmentState(1, 2, 0),
-            listOf(ParameterSymbol.Alpha, Action.AddToTransmissionUnit, ParameterSymbol.Beta)
+            UserEquipmentState.singleQueue(1, 2, 0),
+            listOf(ParameterSymbol.Alpha.singleQueue(), Action.AddToTransmissionUnit.singleQueue(), ParameterSymbol.Beta)
         )
         assertSymbolsEqualForState(
-            UserEquipmentState(2, 0, 0), // No-Op
-            listOf(ParameterSymbol.Alpha, Action.NoOperation)
+            UserEquipmentState.singleQueue(2, 0, 0), // No-Op
+            listOf(ParameterSymbol.Alpha.singleQueue(), Action.NoOperation)
         )
     }
 
@@ -278,8 +278,8 @@ internal class DTMCCreatorTests {
     @Test
     fun testSymbols() {
         val creatorTemp = DTMCCreator(
-            StateManagerConfig(
-                UserEquipmentStateConfig(
+            StateManagerConfig.singleQueue(
+                UserEquipmentStateConfig.singleQueue(
                     taskQueueCapacity = 10, // set to some big number,
                     tuNumberOfPackets = 5,
                     cpuNumberOfSections = 8
@@ -289,7 +289,7 @@ internal class DTMCCreatorTests {
 
         val chain = creatorTemp.create()
 
-        val edges = chain.adjacencyList[UserEquipmentState(4, 3, 2)]!!
+        val edges = chain.adjacencyList[UserEquipmentState.singleQueue(4, 3, 2)]!!
 
         fun assertSymbolsEqualForState(state: UserEquipmentState, list: List<Symbol>) {
 
@@ -301,20 +301,20 @@ internal class DTMCCreatorTests {
         }
 
         assertSymbolsEqualForState(
-            UserEquipmentState(4, 3, 3),
-            listOf(ParameterSymbol.AlphaC, Action.NoOperation, ParameterSymbol.BetaC)
+            UserEquipmentState.singleQueue(4, 3, 3),
+            listOf(ParameterSymbol.AlphaC.singleQueue(), Action.NoOperation, ParameterSymbol.BetaC)
         )
         assertSymbolsEqualForState(
-            UserEquipmentState(4, 4, 3),
-            listOf(ParameterSymbol.AlphaC, Action.NoOperation, ParameterSymbol.Beta)
+            UserEquipmentState.singleQueue(4, 4, 3),
+            listOf(ParameterSymbol.AlphaC.singleQueue(), Action.NoOperation, ParameterSymbol.Beta)
         )
         assertSymbolsEqualForState(
-            UserEquipmentState(5, 3, 3),
-            listOf(ParameterSymbol.Alpha, Action.NoOperation, ParameterSymbol.BetaC)
+            UserEquipmentState.singleQueue(5, 3, 3),
+            listOf(ParameterSymbol.Alpha.singleQueue(), Action.NoOperation, ParameterSymbol.BetaC)
         )
         assertSymbolsEqualForState(
-            UserEquipmentState(5, 4, 3),
-            listOf(ParameterSymbol.Alpha, Action.NoOperation, ParameterSymbol.Beta)
+            UserEquipmentState.singleQueue(5, 4, 3),
+            listOf(ParameterSymbol.Alpha.singleQueue(), Action.NoOperation, ParameterSymbol.Beta)
         )
     }
 
