@@ -22,7 +22,7 @@ object Mock {
             componentsConfig = UserEquipmentComponentsConfig.singleQueue(
                 alpha = 0.4,
                 beta = 0.4,
-                etaConfig = 0.0, // Not used in the baseline policies, set to whatever
+                etaConfig = null, // Not used in the baseline policies, set to whatever
                 pTx = 1.0,
                 pLocal = 0.8,
                 pMax = 20.0

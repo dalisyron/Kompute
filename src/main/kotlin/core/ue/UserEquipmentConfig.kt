@@ -61,7 +61,7 @@ data class UserEquipmentComponentsConfig(
         fun singleQueue(
             beta: Double,
             alpha: Double,
-            etaConfig: Double,
+            etaConfig: Double?,
             pTx: Double,
             pLocal: Double,
             pMax: Double
@@ -69,7 +69,7 @@ data class UserEquipmentComponentsConfig(
             return UserEquipmentComponentsConfig(
                 beta = beta,
                 alpha = listOf(alpha),
-                etaConfig = listOf(etaConfig),
+                etaConfig = if (etaConfig == null) null else listOf(etaConfig),
                 pTx = pTx,
                 pLocal = pLocal,
                 pMax = pMax
@@ -161,7 +161,10 @@ data class OffloadingSystemConfig(
     val stateConfig = userEquipmentConfig.stateConfig
 
     fun getLimitation(): List<StateManagerConfig.Limitation> {
-        return userEquipmentConfig.eta!!.map { eta ->
+        if (userEquipmentConfig.eta == null) {
+            return listOf(StateManagerConfig.Limitation.None)
+        }
+        return userEquipmentConfig.eta.map { eta ->
             if (eta == 1.0) {
                 StateManagerConfig.Limitation.LocalOnly
             } else if (eta == 0.0) {
