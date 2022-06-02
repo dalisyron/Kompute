@@ -63,4 +63,30 @@ object Mock {
 
         return systemCofig
     }
+
+
+    fun doubleQueueConfig1(): OffloadingSystemConfig {
+        return OffloadingSystemConfig(
+            userEquipmentConfig = UserEquipmentConfig(
+                stateConfig = UserEquipmentStateConfig(
+                    taskQueueCapacity = 6,
+                    tuNumberOfPackets = listOf(1, 2),
+                    cpuNumberOfSections = listOf(4, 3),
+                    numberOfQueues = 2
+                ),
+                componentsConfig = UserEquipmentComponentsConfig(
+                    alpha = listOf(0.1, 0.2),
+                    beta = 0.9,
+                    etaConfig = null,
+                    pTx = 1.0,
+                    pLocal = 0.8,
+                    pMax = 200.0
+                )
+            ),
+            environmentParameters = EnvironmentParameters(
+                nCloud = 1,
+                tRx = 0.0,
+            )
+        )
+    }
 }

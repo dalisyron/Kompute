@@ -408,9 +408,9 @@ class MultiQueueOffloadingLPCreatorTests {
             19     | ({ [2], 1, 0, 0, -1 }	|	AddToCPU(0))                      | TL
             20     | ({ [2], 1, 1, 0, 0 }	|	NoOperation)                      | 0.0
          */
-        val TL = (1.0 - systemCofig.eta[0])
-        val TT = -systemCofig.eta[0]
-        val TB = (1.0 - 2.0 * systemCofig.eta[0])
+        val TL = (1.0 - systemCofig.eta!![0])
+        val TT = -systemCofig.eta!![0]
+        val TB = (1.0 - 2.0 * systemCofig.eta!![0])
 
         val expectedCoefficients = mapOf(
             0 to 0.0,

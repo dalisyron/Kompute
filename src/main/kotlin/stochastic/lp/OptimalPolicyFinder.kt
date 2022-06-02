@@ -12,24 +12,24 @@ import kotlin.system.measureTimeMillis
 
 object RangedOptimalPolicyFinder {
 
-    fun findOptimalPolicy(
+    fun findOptimalPolicyForGivenEta(
         baseSystemConfig: OffloadingSystemConfig,
-        rangeStart: Double,
-        rangeEnd: Double,
         precision: Int
     ): StochasticOffloadingPolicy {
 
         var optimalPolicy: StochasticOffloadingPolicy? = null
 
         val etaConfigs = EtaGenerator.generate(baseSystemConfig.numberOfQueues, precision)
+        require(baseSystemConfig.eta == null)
 
         var i = 1
-
+        require(OffloadingSolver.equation4RowsCache.isEmpty())
         for (etaConfig in etaConfigs) {
             val systemConfigWithEtas = baseSystemConfig.withEtaConfig(etaConfig)
             println("cycle $i of ${etaConfigs.size} | etaConfig = $etaConfig | alpha = ${baseSystemConfig.alpha}")
+            i++
             try {
-                val optimalPolicyWithGivenEta = OptimalPolicyFinder.findOptimalPolicy(systemConfigWithEtas, true)
+                val optimalPolicyWithGivenEta = findOptimalPolicyForGivenEta(systemConfigWithEtas, true)
 
                 if (optimalPolicy == null || optimalPolicyWithGivenEta.averageDelay < optimalPolicy.averageDelay) {
                     optimalPolicy = optimalPolicyWithGivenEta
@@ -37,8 +37,8 @@ object RangedOptimalPolicyFinder {
             } catch (e: IneffectivePolicyException) {
                 continue
             }
-            i++
         }
+        OffloadingSolver.equation4RowsCache.clear()
 
         if (optimalPolicy == null) {
             throw NoEffectivePolicyFoundException("No effective policy was found for the given system config which has alpha = ${baseSystemConfig.alpha}")
@@ -48,11 +48,7 @@ object RangedOptimalPolicyFinder {
     }
 
 
-}
-
-object OptimalPolicyFinder {
-
-    fun findOptimalPolicy(
+    fun findOptimalPolicyForGivenEta(
         systemConfig: OffloadingSystemConfig,
         useEquationCache: Boolean = false
     ): StochasticOffloadingPolicy {
@@ -63,51 +59,46 @@ object OptimalPolicyFinder {
             stochasticPolicyConfig = optimalConfig
         )
     }
+
 }
 
 class OffloadingSolver(
     private val systemConfig: OffloadingSystemConfig
 ) {
-    lateinit var allStates: List<UserEquipmentState>
 
-    val stateManager = UserEquipmentStateManager(
-        StateManagerConfig(
-            userEquipmentStateConfig = systemConfig.stateConfig,
-            limitation = systemConfig.getLimitation()
-        )
-    )
-
-    init {
-        allStates = stateManager.allStates()
-    }
-
-    var equation4RowsCache: List<EquationRow>? = null
+    private val allStates: List<UserEquipmentState> = UserEquipmentStateManager.getAllStatesForConfig(systemConfig)
 
     fun findOptimalStochasticConfig(useEquationCache: Boolean = false): StochasticPolicyConfig {
         val offloadingLPCreator = OffloadingLPCreator(systemConfig)
         lateinit var standardLinearProgram: StandardLinearProgram
-
         lateinit var offloadingLP: OffloadingLinearProgram
 
         val creationTime: Long = measureTimeMillis {
-//            if (useEquationCache && equation4RowsCache != null) {
-//                offloadingLP = offloadingLPCreator.createOffloadingLinearProgramExcludingEquation4()
-//                val rows = offloadingLP.standardLinearProgram.rows.toMutableList()
-//                for (i in allStates.indices) {
-//                    check(rows[2 + systemConfig.numberOfQueues + i] == null)
-//                    rows[2 + systemConfig.numberOfQueues + i] = equation4RowsCache!![i]
-//                }
-//                standardLinearProgram = StandardLinearProgram(rows)
-//            } else {
+            val etaType: OffloadingEtaType = OffloadingEtaType.fromEtaConfig(systemConfig.eta!!)
+            val equation4Cache = equation4RowsCache[etaType]
+
+            if (useEquationCache && equation4Cache != null) {
+                offloadingLP = offloadingLPCreator.createOffloadingLinearProgramExcludingEquation4()
+                val rows = offloadingLP.standardLinearProgram.rows.toMutableList()
+                for (i in allStates.indices) {
+                    check(rows[2 + systemConfig.numberOfQueues + i] == null)
+                    rows[2 + systemConfig.numberOfQueues + i] = equation4Cache[i]
+                }
+                standardLinearProgram = StandardLinearProgram(rows)
+            } else {
                 offloadingLP = offloadingLPCreator.createOffloadingLinearProgram()
                 standardLinearProgram = offloadingLP.standardLinearProgram
-//                if (equation4RowsCache == null) {
-//                    equation4RowsCache =
-//                        standardLinearProgram.rows.subList(2 + systemConfig.numberOfQueues, 2 + systemConfig.numberOfQueues + allStates.size).requireNoNulls()
-//                }
+                equation4RowsCache.put(
+                    key = etaType,
+                    value = standardLinearProgram.rows.subList(
+                        2 + systemConfig.numberOfQueues,
+                        2 + systemConfig.numberOfQueues + allStates.size
+                    ).requireNoNulls()
+                )
             }
+        }
 
-        // println("Creation Time : $creationTime ms")
+         println("Creation Time : $creationTime ms")
         val indexMapping = offloadingLP.indexMapping
         lateinit var solution: LPSolution
         val solveTime = measureTimeMillis {
@@ -116,7 +107,7 @@ class OffloadingSolver(
         if (solution.isAbnormal) {
             throw IneffectivePolicyException("")
         }
-        // println("Solve Time: $solveTime ms")
+         println("Solve Time: $solveTime ms")
         // println("solution = $solution")
 
         val policyConfig = createPolicyConfig(solution, indexMapping)
@@ -124,30 +115,7 @@ class OffloadingSolver(
         return policyConfig
     }
 
-    private fun checkSolution(solution: LPSolution, indexMapping: OffloadingLPCreator.IndexMapping) {
-        val stateActionProbabilities: MutableMap<StateAction, Double> = solution.variableValues.mapIndexed { index, d ->
-            indexMapping.stateActionByCoefficientIndex[index]!! to d
-        }.toMap().toMutableMap()
-
-
-        for (state in allStates) {
-            for (action in systemConfig.allActions) {
-                val key = StateAction(state, action)
-                if (!stateActionProbabilities.containsKey(key)) {
-                    stateActionProbabilities[key] = 0.0
-                }
-            }
-        }
-
-        println("CHECKING")
-        stateActionProbabilities.keys.forEach {
-            if (stateActionProbabilities[it]!! > 0.0) {
-                println("P($it) = ${stateActionProbabilities[it]}")
-            }
-        }
-    }
-
-    fun getStateActionProbabilities(
+    private fun getStateActionProbabilities(
         solution: LPSolution,
         indexMapping: OffloadingLPCreator.IndexMapping
     ): Map<StateAction, Double> {
@@ -158,11 +126,7 @@ class OffloadingSolver(
             .toMap()
     }
 
-    fun validateStateActionProbabilities(stateActionProbabilities: Map<StateAction, Double>) {
-
-    }
-
-    fun createPolicyConfig(
+    private fun createPolicyConfig(
         solution: LPSolution,
         indexMapping: OffloadingLPCreator.IndexMapping
     ): StochasticPolicyConfig {
@@ -230,7 +194,7 @@ class OffloadingSolver(
 
         return StochasticPolicyConfig(
             decisionProbabilities = decisions,
-            etaConfig = systemConfig.eta,
+            etaConfig = systemConfig.eta!!,
             averageDelay = solution.objectiveValue,
             systemConfig = systemConfig,
             stateProbabilities = stateProbabilities,
@@ -239,14 +203,9 @@ class OffloadingSolver(
 
     }
 
-    data class StochasticPolicyConfig(
-        val etaConfig: List<Double>,
-        val averageDelay: Double,
-        val decisionProbabilities: Map<StateAction, Double>,
-        val stateProbabilities: Map<UserEquipmentState, Double>,
-        val stateActionProbabilities: Map<StateAction, Double>,
-        val systemConfig: OffloadingSystemConfig
-    )
+    companion object {
+        var equation4RowsCache: MutableMap<OffloadingEtaType, List<EquationRow>> = mutableMapOf()
+    }
 }
 
 class IneffectivePolicyException(message: String) : RuntimeException(message)

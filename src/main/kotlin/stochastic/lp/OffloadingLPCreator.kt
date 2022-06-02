@@ -129,7 +129,7 @@ class OffloadingLPCreator(
             val coefficientValue = when (action) {
                 is Action.AddToCPU -> {
                     if (action.queueIndex == queueIndex) {
-                        1.0 - systemConfig.eta[queueIndex]
+                        1.0 - systemConfig.eta!![queueIndex]
                     } else {
                         0.0
                     }
@@ -137,16 +137,16 @@ class OffloadingLPCreator(
                 is Action.AddToBothUnits -> {
                     var temp = 0.0
                     if (action.cpuTaskQueueIndex == queueIndex) {
-                        temp += (1.0 - systemConfig.eta[queueIndex])
+                        temp += (1.0 - systemConfig.eta!![queueIndex])
                     }
                     if (action.transmissionUnitTaskQueueIndex == queueIndex) {
-                        temp += -systemConfig.eta[queueIndex]
+                        temp += -systemConfig.eta!![queueIndex]
                     }
                     temp
                 }
                 is Action.AddToTransmissionUnit -> {
                     if (action.queueIndex == queueIndex) {
-                        -systemConfig.eta[queueIndex]
+                        -systemConfig.eta!![queueIndex]
                     } else {
                         0.0
                     }

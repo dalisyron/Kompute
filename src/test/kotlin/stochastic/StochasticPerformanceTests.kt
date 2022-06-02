@@ -2,21 +2,16 @@ package stochastic
 
 import core.environment.EnvironmentParameters
 import core.ue.OffloadingSystemConfig
-import core.ue.OffloadingSystemConfig.Companion.withAlpha
 import core.ue.OffloadingSystemConfig.Companion.withBeta
-import core.ue.OffloadingSystemConfig.Companion.withEtaConfig
-import core.ue.OffloadingSystemConfig.Companion.withNumberOfSections
 import core.ue.OffloadingSystemConfig.Companion.withTaskQueueCapacity
 import core.ue.UserEquipmentComponentsConfig
 import core.ue.UserEquipmentConfig
 import core.ue.UserEquipmentStateConfig
 import org.junit.Test
 import org.junit.experimental.categories.Category
-import core.policy.Action
 import core.ue.OffloadingSystemConfig.Companion.withAlphaSingleQueue
 import core.ue.OffloadingSystemConfig.Companion.withEtaConfigSingleQueue
 import core.ue.OffloadingSystemConfig.Companion.withNumberOfSectionsSingleQueue
-import stochastic.lp.OptimalPolicyFinder
 import stochastic.lp.RangedOptimalPolicyFinder
 
 interface PerformanceTests
@@ -59,7 +54,7 @@ class StochasticPerformanceTests {
         etas.forEach {
             println("testing for eta = $it")
             val config = getSimpleConfig().withTaskQueueCapacity(50).withEtaConfigSingleQueue(it)
-            val optimalPolicy = OptimalPolicyFinder.findOptimalPolicy(config)
+            val optimalPolicy = RangedOptimalPolicyFinder.findOptimalPolicyForGivenEta(config)
             println("estimated average delay = ${optimalPolicy.averageDelay}")
         }
     }
@@ -69,7 +64,7 @@ class StochasticPerformanceTests {
     fun testRanged1() {
         // run time in e1c21057b88ede25d4953f21f8e71db73e34dd12 was 4 min 19 sec
         val baseConfig = getSimpleConfig().withAlphaSingleQueue(0.1).withBeta(0.9).withTaskQueueCapacity(50)
-        val optimalPolicy = RangedOptimalPolicyFinder.findOptimalPolicy(baseConfig, 0.0, 1.0, 20)
+        val optimalPolicy = RangedOptimalPolicyFinder.findOptimalPolicyForGivenEta(baseConfig, 20)
         println(optimalPolicy.averageDelay)
     }
 
@@ -78,7 +73,7 @@ class StochasticPerformanceTests {
     fun testBig() {
         // run time in e1c21057b88ede25d4953f21f8e71db73e34dd12 was +10 min
         val config = getSimpleConfig().withEtaConfigSingleQueue(0.9).withTaskQueueCapacity(80).withNumberOfSectionsSingleQueue(30)
-        val optimalPolicy = OptimalPolicyFinder.findOptimalPolicy(config)
+        val optimalPolicy = RangedOptimalPolicyFinder.findOptimalPolicyForGivenEta(config)
         println(optimalPolicy.averageDelay)
     }
 
@@ -86,7 +81,7 @@ class StochasticPerformanceTests {
     @Category(PerformanceTests::class)
     fun testSingle() {
         val config = getSimpleConfig().withAlphaSingleQueue(0.1).withBeta(0.9).withTaskQueueCapacity(50)
-        val optimalPolicy = OptimalPolicyFinder.findOptimalPolicy(config)
+        val optimalPolicy = RangedOptimalPolicyFinder.findOptimalPolicyForGivenEta(config)
         println(optimalPolicy.averageDelay)
     }
 }

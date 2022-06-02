@@ -7,7 +7,6 @@ import core.policy.GreedyOffloadFirstPolicy
 import core.policy.LocalOnlyPolicy
 import core.policy.TransmitOnlyPolicy
 import core.ue.OffloadingSystemConfig
-import core.ue.OffloadingSystemConfig.Companion.withAlpha
 import core.ue.OffloadingSystemConfig.Companion.withAlphaSingleQueue
 import simulation.simulation.Simulator
 import stochastic.lp.RangedOptimalPolicyFinder
@@ -48,7 +47,7 @@ class RangedAlphaStochasticPolicyTester(
         for (alpha in alphas) {
             val config = baseSystemConfig.withAlphaSingleQueue(alpha)
             val simulator = Simulator(config)
-            val stochastic = RangedOptimalPolicyFinder.findOptimalPolicy(config, 0.0, 1.0, precision)
+            val stochastic = RangedOptimalPolicyFinder.findOptimalPolicyForGivenEta(config, precision)
             println("Running simulations for alpha = $alpha")
 
             val localOnlyDelay = simulator.simulatePolicy(LocalOnlyPolicy, simulationTicks).averageDelay

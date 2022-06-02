@@ -4,9 +4,6 @@ import com.google.ortools.Loader
 import com.google.ortools.glop.GlopParameters
 import com.google.ortools.linearsolver.MPConstraint
 import com.google.ortools.linearsolver.MPSolver
-import java.lang.IllegalArgumentException
-import java.util.Collections.max
-import kotlin.math.pow
 
 fun MPSolver.makeEqualityConstraint(rhs: Double, name: String): MPConstraint {
     return makeConstraint(rhs, rhs, name)
@@ -27,7 +24,9 @@ object LPSolver {
     fun solve(lp: StandardLinearProgram, retryCounter: Int = 0): LPSolution {
         val rows = lp.rows.requireNoNulls()
         check(rows.map { it.coefficients.size }
-            .toSet().size == 1) // Check there is an equal number of variables for each row
+            .toSet().size == 1) {
+            rows.mapIndexed { index, equationRow -> equationRow.coefficients.size to index}.groupBy { it.first }.mapValues { it -> it.value.map { it.second } }
+        } // Check there is an equal number of variables for each row
 
         check(retryCounter in 0..2)
 

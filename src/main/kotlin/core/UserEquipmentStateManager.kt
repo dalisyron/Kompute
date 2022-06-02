@@ -275,7 +275,7 @@ class UserEquipmentStateManager(private val config: StateManagerConfig) : Possib
                         ParameterSymbol.AlphaC(notFullIndicesAfterAction[index])
                     }
                 }
-                val destState = getNextStateAddingTasksBasedOnMapping(stateAfterAction, mapping)
+                val destState = getNextStateAddingTasksBasedOnMapping(stateAfterAction, mapping, notFullIndicesAfterAction)
 
                 if (stateAfterAction.isTUActive()) {
                     transitions.add(
@@ -309,15 +309,18 @@ class UserEquipmentStateManager(private val config: StateManagerConfig) : Possib
 
     private fun getNextStateAddingTasksBasedOnMapping(
         sourceState: UserEquipmentState,
-        taskArrivalMapping: List<Boolean>
+        taskArrivalMapping: List<Boolean>,
+        notFullIndicesAfterAction: List<Int>
     ): UserEquipmentState {
-        require(taskArrivalMapping.size == config.numberOfQueues)
+        require(taskArrivalMapping.size == notFullIndicesAfterAction.size) {
+            "$taskArrivalMapping | ${config.numberOfQueues}"
+        }
 
         var startState = sourceState
 
         for (i in taskArrivalMapping.indices) {
             if (taskArrivalMapping[i]) {
-                startState = getNextStateAddingTaskToQueue(startState, i)
+                startState = getNextStateAddingTaskToQueue(startState, notFullIndicesAfterAction[i])
             }
         }
 
@@ -392,6 +395,11 @@ class UserEquipmentStateManager(private val config: StateManagerConfig) : Possib
                     limitation = offloadingSystemConfig.getLimitation()
                 )
             )
+        }
+
+        fun getAllStatesForConfig(systemConfig: OffloadingSystemConfig): List<UserEquipmentState> {
+            val manager = fromSystemConfig(systemConfig)
+            return manager.allStates()
         }
     }
 }

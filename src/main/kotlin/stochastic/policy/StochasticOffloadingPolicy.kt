@@ -6,14 +6,14 @@ import core.policy.UserEquipmentExecutionState
 import stochastic.lp.StateAction
 import core.ue.OffloadingSystemConfig
 import core.UserEquipmentStateManager
-import stochastic.lp.OffloadingSolver
 import core.ue.UserEquipmentState
+import stochastic.lp.StochasticPolicyConfig
 import java.lang.IllegalStateException
 import kotlin.math.abs
 import kotlin.random.Random
 
 data class StochasticOffloadingPolicy(
-    val stochasticPolicyConfig: OffloadingSolver.StochasticPolicyConfig,
+    val stochasticPolicyConfig: StochasticPolicyConfig,
     val systemConfig: OffloadingSystemConfig
 ) : Policy {
     val averageDelay = stochasticPolicyConfig.averageDelay

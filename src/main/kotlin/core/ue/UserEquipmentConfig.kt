@@ -15,7 +15,7 @@ data class UserEquipmentConfig(
     val cpuNumberOfSections: List<Int> = stateConfig.cpuNumberOfSections
     val beta: Double = componentsConfig.beta
     val alpha: List<Double> = componentsConfig.alpha
-    val eta: List<Double> = componentsConfig.etaConfig
+    val eta: List<Double>? = componentsConfig.etaConfig
     val pTx: Double = componentsConfig.pTx
     val pLoc: Double = componentsConfig.pLocal
     val numberOfQueues: Int = stateConfig.numberOfQueues
@@ -49,7 +49,7 @@ data class UserEquipmentStateConfig(
 data class UserEquipmentComponentsConfig(
     val beta: Double,
     val alpha: List<Double>,
-    val etaConfig: List<Double>,
+    val etaConfig: List<Double>?,
     val pTx: Double,
     val pLocal: Double,
     val pMax: Double
@@ -114,7 +114,7 @@ data class OffloadingSystemConfig(
     val cpuNumberOfSections: List<Int> = userEquipmentConfig.stateConfig.cpuNumberOfSections
     val beta: Double = userEquipmentConfig.componentsConfig.beta
     val alpha: List<Double> = userEquipmentConfig.componentsConfig.alpha
-    val eta: List<Double> = userEquipmentConfig.componentsConfig.etaConfig
+    val eta: List<Double>? = userEquipmentConfig.componentsConfig.etaConfig
     val pTx: Double = userEquipmentConfig.componentsConfig.pTx
     val pLoc: Double = userEquipmentConfig.componentsConfig.pLocal
     val nCloud: Int = environmentParameters.nCloud
@@ -143,7 +143,7 @@ data class OffloadingSystemConfig(
     }
 
     fun expectedTaskTime(queueIndex: Int): Double {
-        val eta: Double = eta[queueIndex]
+        val eta: Double = eta!![queueIndex]
         val numberOfSections: Int = cpuNumberOfSections[queueIndex]
         return (eta * numberOfSections + (1 - eta) * expectedTCloud(queueIndex))
     }
@@ -161,7 +161,7 @@ data class OffloadingSystemConfig(
     val stateConfig = userEquipmentConfig.stateConfig
 
     fun getLimitation(): List<StateManagerConfig.Limitation> {
-        return userEquipmentConfig.eta.map { eta ->
+        return userEquipmentConfig.eta!!.map { eta ->
             if (eta == 1.0) {
                 StateManagerConfig.Limitation.LocalOnly
             } else if (eta == 0.0) {
