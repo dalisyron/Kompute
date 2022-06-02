@@ -90,23 +90,23 @@ class OffloadingSolver(
         lateinit var offloadingLP: OffloadingLinearProgram
 
         val creationTime: Long = measureTimeMillis {
-            if (useEquationCache && equation4RowsCache != null) {
-                offloadingLP = offloadingLPCreator.createOffloadingLinearProgramExcludingEquation4()
-                val rows = offloadingLP.standardLinearProgram.rows.toMutableList()
-                for (i in allStates.indices) {
-                    check(rows[3 + i + systemConfig.numberOfQueues] == null)
-                    rows[3 + i + systemConfig.numberOfQueues] = equation4RowsCache!![i]
-                }
-                standardLinearProgram = StandardLinearProgram(rows)
-            } else {
+//            if (useEquationCache && equation4RowsCache != null) {
+//                offloadingLP = offloadingLPCreator.createOffloadingLinearProgramExcludingEquation4()
+//                val rows = offloadingLP.standardLinearProgram.rows.toMutableList()
+//                for (i in allStates.indices) {
+//                    check(rows[2 + systemConfig.numberOfQueues + i] == null)
+//                    rows[2 + systemConfig.numberOfQueues + i] = equation4RowsCache!![i]
+//                }
+//                standardLinearProgram = StandardLinearProgram(rows)
+//            } else {
                 offloadingLP = offloadingLPCreator.createOffloadingLinearProgram()
                 standardLinearProgram = offloadingLP.standardLinearProgram
-                if (equation4RowsCache == null) {
-                    equation4RowsCache =
-                        standardLinearProgram.rows.subList(3 + systemConfig.numberOfQueues, 3 + systemConfig.numberOfQueues + allStates.size).requireNoNulls()
-                }
+//                if (equation4RowsCache == null) {
+//                    equation4RowsCache =
+//                        standardLinearProgram.rows.subList(2 + systemConfig.numberOfQueues, 2 + systemConfig.numberOfQueues + allStates.size).requireNoNulls()
+//                }
             }
-        }
+
         // println("Creation Time : $creationTime ms")
         val indexMapping = offloadingLP.indexMapping
         lateinit var solution: LPSolution

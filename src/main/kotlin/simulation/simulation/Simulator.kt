@@ -17,7 +17,6 @@ class Simulator(
     private val logger = Logger(this)
 
     fun simulatePolicy(policy: Policy, numberOfTimeSlots: Int): SimulationReport {
-        println("Start simulation for $policy")
         userEquipment.reset()
         logger.reset()
         userEquipment.logger = logger

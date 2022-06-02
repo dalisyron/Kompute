@@ -61,8 +61,8 @@ data class UserEquipmentState(
                 taskQueueLengths = listOf(taskQueueLengths),
                 tuState = tuState,
                 cpuState = cpuState,
-                tuTaskTypeQueueIndex = -1,
-                cpuTaskTypeQueueIndex = -1
+                tuTaskTypeQueueIndex = if (tuState == 0) -1 else 0,
+                cpuTaskTypeQueueIndex = if (cpuState == 0) -1 else 0
             )
         }
     }

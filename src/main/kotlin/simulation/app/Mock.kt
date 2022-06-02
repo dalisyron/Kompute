@@ -35,4 +35,32 @@ object Mock {
         )
         return systemConfig
     }
+
+    fun simpleConfig(): OffloadingSystemConfig {
+        val environmentParameters = EnvironmentParameters(
+            nCloud = 1,
+            tRx = 0.0,
+        )
+        val userEquipmentConfig = UserEquipmentConfig(
+            stateConfig = UserEquipmentStateConfig.singleQueue(
+                taskQueueCapacity = 2,
+                tuNumberOfPackets = 1,
+                cpuNumberOfSections = 2
+            ),
+            componentsConfig = UserEquipmentComponentsConfig.singleQueue(
+                alpha = 0.30,
+                beta = 0.4,
+                etaConfig = 0.2,
+                pTx = 1.0,
+                pLocal = 0.8,
+                pMax = 200.0
+            )
+        )
+        val systemCofig = OffloadingSystemConfig(
+            userEquipmentConfig = userEquipmentConfig,
+            environmentParameters = environmentParameters
+        )
+
+        return systemCofig
+    }
 }

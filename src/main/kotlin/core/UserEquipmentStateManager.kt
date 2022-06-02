@@ -5,7 +5,6 @@ import core.ue.UserEquipmentStateConfig
 import core.symbol.ParameterSymbol
 import core.policy.Action
 import core.ue.OffloadingSystemConfig
-import core.ue.UserEquipmentConfig
 import stochastic.dtmc.EdgeProvider
 import stochastic.dtmc.transition.Edge
 import stochastic.dtmc.transition.Transition
@@ -228,18 +227,19 @@ class UserEquipmentStateManager(private val config: StateManagerConfig) : Possib
         }
     }
 
-    private fun getTransitionsForAction(state: UserEquipmentState, action: Action): List<Transition> {
+    fun getTransitionsForAction(state: UserEquipmentState, action: Action): List<Transition> {
         checkStateAgainstLimitations(state)
         val stateAfterAction = getNextStateRunningAction(state, action).let {
             if (it.isCPUActive()) getNextStateAdvancingCPU(it) else it
         }
         checkStateAgainstLimitations(stateAfterAction)
         val transitions: MutableList<Transition> = mutableListOf()
-        val notFullIndices = (0 until config.numberOfQueues).filter {
-            state.taskQueueLengths[it] < config.userEquipmentStateConfig.taskQueueCapacity
+
+        val notFullIndicesAfterAction = (stateAfterAction.taskQueueLengths.indices).filter {
+            stateAfterAction.taskQueueLengths[it] < config.userEquipmentStateConfig.taskQueueCapacity
         }
 
-        if (notFullIndices.isEmpty()) {
+        if (notFullIndicesAfterAction.isEmpty()) {
             if (stateAfterAction.isTUActive()) {
                 transitions.add(
                     Transition(
@@ -265,29 +265,30 @@ class UserEquipmentStateManager(private val config: StateManagerConfig) : Possib
                 )
             }
         } else {
-            val taskArrivalMappings = getAllSubsets(notFullIndices.size)
+            val taskArrivalMappings = getAllSubsets(notFullIndicesAfterAction.size)
 
             for (mapping in taskArrivalMappings) {
                 val addTaskSymbols = mapping.mapIndexed { index, taskArrives ->
                     if (taskArrives) {
-                        ParameterSymbol.Alpha(notFullIndices[index])
+                        ParameterSymbol.Alpha(notFullIndicesAfterAction[index])
                     } else {
-                        ParameterSymbol.AlphaC(notFullIndices[index])
+                        ParameterSymbol.AlphaC(notFullIndicesAfterAction[index])
                     }
                 }
+                val destState = getNextStateAddingTasksBasedOnMapping(stateAfterAction, mapping)
 
                 if (stateAfterAction.isTUActive()) {
                     transitions.add(
                         Transition(
                             source = state,
-                            dest = stateAfterAction,
+                            dest = getNextStateAdvancingTU(destState),
                             transitionSymbols = listOf(listOf(action, ParameterSymbol.Beta) + addTaskSymbols)
                         )
                     )
                     transitions.add(
                         Transition(
                             source = state,
-                            dest = stateAfterAction,
+                            dest = destState,
                             transitionSymbols = listOf(listOf(action, ParameterSymbol.BetaC) + addTaskSymbols)
                         )
                     )
@@ -295,7 +296,7 @@ class UserEquipmentStateManager(private val config: StateManagerConfig) : Possib
                     transitions.add(
                         Transition(
                             source = state,
-                            dest = stateAfterAction,
+                            dest = destState,
                             transitionSymbols = listOf(listOf(action) + addTaskSymbols)
                         )
                     )
@@ -304,6 +305,23 @@ class UserEquipmentStateManager(private val config: StateManagerConfig) : Possib
         }
 
         return transitions
+    }
+
+    private fun getNextStateAddingTasksBasedOnMapping(
+        sourceState: UserEquipmentState,
+        taskArrivalMapping: List<Boolean>
+    ): UserEquipmentState {
+        require(taskArrivalMapping.size == config.numberOfQueues)
+
+        var startState = sourceState
+
+        for (i in taskArrivalMapping.indices) {
+            if (taskArrivalMapping[i]) {
+                startState = getNextStateAddingTaskToQueue(startState, i)
+            }
+        }
+
+        return startState
     }
 
     fun isStatePossible(state: UserEquipmentState): Boolean {

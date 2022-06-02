@@ -77,7 +77,6 @@ class Logger(
 
     fun logTaskTransmittedByTU() {
         log(Event.TaskTransmittedByTU(tuTaskId, timingInfoProvider.getCurrentTimeslot() + 1))
-        println("transmitted $tuTaskId")
         tuTaskId = -1
     }
 

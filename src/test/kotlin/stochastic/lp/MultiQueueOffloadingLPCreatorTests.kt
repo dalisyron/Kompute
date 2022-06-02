@@ -440,8 +440,50 @@ class MultiQueueOffloadingLPCreatorTests {
     }
 
     @Test
-    fun testEquation4Coefficients() {
+    fun testEquationRowCount() {
+        val stateManager = UserEquipmentStateManager.fromSystemConfig(systemCofig)
+        val allStates = stateManager.allStates()
+        assertThat(lp.rows)
+            .hasSize(2 + systemCofig.numberOfQueues + allStates.size + 1)
+    }
 
+    @Test
+    fun testEquationRowsNotNull() {
+        lp.rows.forEach {
+            assertThat(it)
+                .isNotNull()
+        }
+    }
+
+    @Test
+    fun testEquation4Coefficients() {
+        val stateManager = UserEquipmentStateManager.fromSystemConfig(systemCofig)
+
+        val state = UserEquipmentState.singleQueue(2, 0, 1)
+        println(state)
+        val stateIndex = stateManager.allStates().indexOf(state)
+        assertThat(stateIndex)
+            .isEqualTo(9)
+        /*
+            State Table
+
+            State               | Index
+            ========================================
+             (0, 0, 0)          | 0
+             (0, 0, 1)          | 1
+             (0, 1, 0)          | 2
+             (0, 1, 1)          | 3
+             (1, 0, 0)          | 4
+             (1, 0, 1)          | 5
+             (1, 1, 0)          | 6
+             (1, 1, 1)          | 7
+             (2, 0, 0)          | 8
+             (2, 0, 1)          | 9
+             (2, 1, 0)          | 10
+             (2, 1, 1)          | 11
+         */
+
+        val equationIndex = 2 + systemCofig.numberOfQueues + stateIndex
         /*
             0      | ({ [0], 0, 0, -1, -1 }	|	NoOperation)                      | 0.0
             1      | ({ [0], 0, 1, -1, 0 }	|	NoOperation)                      | 0.0
@@ -466,11 +508,11 @@ class MultiQueueOffloadingLPCreatorTests {
             20     | ({ [2], 1, 1, 0, 0 }	|	NoOperation)                      | 0.0
          */
         val expectedCoefficients: MutableList<Double> = mutableListOfZeros(21)
-        expectedCoefficients[19] = systemCofig.beta * systemCofig.alpha[0]
         expectedCoefficients[13] = systemCofig.alpha[0]
-        expectedCoefficients[36] = -1.0
-        expectedCoefficients[37] = -1.0
-        expectedCoefficients[38] = -1.0
-        expectedCoefficients[39] = -1.0
+        expectedCoefficients[19] = systemCofig.beta * systemCofig.alpha[0]
+        expectedCoefficients[16] = -1.0
+        expectedCoefficients[17] = -1.0
+
+        validateCoefficients(equationIndex, expectedCoefficients)
     }
 }

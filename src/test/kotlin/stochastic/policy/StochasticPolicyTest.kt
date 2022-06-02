@@ -102,7 +102,7 @@ class StochasticPolicyTest {
             etaEnd = 0.28,
             sampleCount = 28,
             baseSystemConfig = baseConfig,
-            simulationTicks = 2_000_000,
+            simulationTicks = 10_000_000,
             tolerance = 2e-2
         )
 
@@ -408,11 +408,11 @@ class StochasticPolicyTest {
     fun testSampleFromLiyuUnlimitedPower() {
         val tester = RangedAlphaStochasticPolicyTester(
             baseSystemConfig = Mock.configFromLiyu().withTaskQueueCapacity(20).withPMax(30.0),
-            alphaStart = 0.31,
+            alphaStart = 0.02,
             alphaEnd = 0.40,
             alphaSampleCount = 40,
-            precision = 10,
-            simulationTicks = 10_000,
+            precision = 100,
+            simulationTicks = 1000_000,
             plotEnabled = true,
             assertionsEnabled = true
         )
@@ -434,5 +434,15 @@ class StochasticPolicyTest {
         )
 
         tester.run()
+    }
+
+    @Test
+    fun testSingleEta() {
+        val stochasticPolicy = OptimalPolicyFinder.findOptimalPolicy(
+            Mock.configFromLiyu().withAlphaSingleQueue(0.10)
+                .withEtaConfigSingleQueue(0.05)
+        )
+
+        println(stochasticPolicy)
     }
 }
