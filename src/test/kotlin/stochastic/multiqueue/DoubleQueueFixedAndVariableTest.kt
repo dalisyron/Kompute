@@ -57,6 +57,7 @@ class DoubleQueueFixedAndVariableTest {
                 .of(resultSingleThreaded.stochasticDelays[index])
         }
 
+        // Run result in 595aa9d Concurrent = 75888 ms | Single = 145262 ms
         println("Concurrent = $runtimeConcurrent ms | Single = $runtimeSingleThread ms")
     }
 }
