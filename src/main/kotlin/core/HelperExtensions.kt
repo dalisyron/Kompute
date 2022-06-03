@@ -1,5 +1,6 @@
 package core
 
+import java.lang.Integer.max
 import java.lang.Integer.min
 import kotlin.random.Random
 import kotlin.random.nextInt
@@ -166,4 +167,44 @@ fun <T> cartesianProduct(lists: List<List<T>>): List<List<T>> {
 
 fun <T : Comparable<T>> List<T>.maxNotEmpty(): T {
     return requireNotNull(maxOrNull())
+}
+
+fun <T> List<T>.splitEqual(k: Int): List<List<T>> {
+    require(k > 0)
+    require(this.isNotEmpty())
+    require(k * 1 <= size)
+
+    val result: MutableList<List<T>> = mutableListOf()
+    val rem = size % k
+
+    var ptr = 0
+    repeat(rem) {
+        val temp = mutableListOf<T>()
+        for (i in 0 until size / k + 1) {
+            temp.add(this[ptr])
+            ptr++
+        }
+        result.add(temp)
+    }
+
+    repeat(k - rem) {
+        val temp = mutableListOf<T>()
+        for (i in 0 until (size / k)) {
+            temp.add(this[ptr])
+            ptr++
+        }
+        result.add(temp)
+    }
+    return result
+}
+
+fun List<Int>.toCumulative(): List<Int> {
+    val result: MutableList<Int> = mutableListOf()
+    var acc = 0
+    for (element in this) {
+        acc += element
+        result.add(acc)
+    }
+
+    return result
 }

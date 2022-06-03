@@ -1,10 +1,14 @@
 package stochastic.multiqueue
 
+import com.google.common.truth.Truth.assertThat
+import core.ue.OffloadingSystemConfig.Companion.withNumberOfSections
+import core.ue.OffloadingSystemConfig.Companion.withTaskQueueCapacity
 import org.junit.Test
 import plot.PlotterFixedAndRanging
 import simulation.app.Mock
 import stochastic.policy.AlphaRange
 import stochastic.policy.MultiQueueRangedAlphaTester
+import kotlin.system.measureTimeMillis
 
 class DoubleQueueFixedAndVariableTest {
 
@@ -22,5 +26,37 @@ class DoubleQueueFixedAndVariableTest {
 
         val result = tester.run()
         PlotterFixedAndRanging.plot(result)
+    }
+
+    @Test
+    fun testDoubleQueueFixedAndVariableConcurrent() {
+        val doubleQueueConfig = Mock.doubleQueueConfig1().withTaskQueueCapacity(5).withNumberOfSections(listOf(4, 2))
+
+        val tester = MultiQueueRangedAlphaTester(
+            baseSystemConfig = doubleQueueConfig,
+            alphaRanges = listOf(AlphaRange.Variable(0.01, 0.20, 4), AlphaRange.Constant(0.20)),
+            precision = 3,
+            simulationTicks = 4_000_000,
+            assertionsEnabled = false
+        )
+
+        val resultConcurrent: MultiQueueRangedAlphaTester.Result
+        val runtimeConcurrent = measureTimeMillis {
+            resultConcurrent = tester.runConcurrent(4)
+        }
+
+        println("Finished concurrent in $runtimeConcurrent ms")
+        val resultSingleThreaded: MultiQueueRangedAlphaTester.Result
+        val runtimeSingleThread = measureTimeMillis {
+            resultSingleThreaded = tester.run()
+        }
+
+        resultConcurrent.stochasticDelays.forEachIndexed { index, value ->
+            assertThat(value)
+                .isWithin(1e-3)
+                .of(resultSingleThreaded.stochasticDelays[index])
+        }
+
+        println("Concurrent = $runtimeConcurrent ms | Single = $runtimeSingleThread ms")
     }
 }
