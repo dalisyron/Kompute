@@ -26,14 +26,15 @@ class SimulationReportCreator(
 //        println("eventsById = $eventsById")
 
         val taskDelays: Map<Int, Double> = eventsById.mapValues { (_, list) ->
-            val startTime: Int = list.find { it is Event.TaskArrival }!!.timeSlot
+            val arrivalEvent: Event.TaskArrival = list.find { it is Event.TaskArrival }!! as Event.TaskArrival
+            val startTime: Int = arrivalEvent.timeSlot
             val finishTime: Double = if (list.any { it is Event.TaskTransmittedByTU }) {
                 val transmittedTime = list.find { it is Event.TaskTransmittedByTU }!!.timeSlot
 
                 // val sentForTransmissionTime = list.find { it is Event.TaskSentToTU }!!.timeSlot
                 // transmissionTimes.add(transmittedTime - sentForTransmissionTime)
 
-                transmittedTime + systemConfig.tRx + systemConfig.nCloud
+                transmittedTime + systemConfig.tRx + systemConfig.nCloud[arrivalEvent.queueIndex]
             } else {
                 list.find { it is Event.TaskProcessedByCPU }!!.timeSlot.toDouble()
             }

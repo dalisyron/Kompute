@@ -50,6 +50,32 @@ data class UserEquipmentState(
         return tuState > 0
     }
 
+    fun getTwoRandomQueueIndicesForTwoTasks(): Pair<Int, Int>? {
+        val nonEmptyQueueIndices = taskQueueLengths.indices.filter {
+            taskQueueLengths[it] > 0
+        }
+
+        if (nonEmptyQueueIndices.size == 1) {
+            if (taskQueueLengths[nonEmptyQueueIndices[0]] == 1) {
+                return null
+            } else {
+                return nonEmptyQueueIndices.first() to nonEmptyQueueIndices.first()
+            }
+        }
+
+        val options: MutableList<Pair<Int, Int>> = mutableListOf()
+
+        for (i in nonEmptyQueueIndices) {
+            for (j in nonEmptyQueueIndices) {
+                if (i != j || taskQueueLengths[i] > 1) {
+                    options.add(i to j)
+                }
+            }
+        }
+
+        return options.random()
+    }
+
     companion object {
 
         fun singleQueue(

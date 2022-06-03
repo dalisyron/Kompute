@@ -117,7 +117,7 @@ data class OffloadingSystemConfig(
     val eta: List<Double>? = userEquipmentConfig.componentsConfig.etaConfig
     val pTx: Double = userEquipmentConfig.componentsConfig.pTx
     val pLoc: Double = userEquipmentConfig.componentsConfig.pLocal
-    val nCloud: Int = environmentParameters.nCloud
+    val nCloud: List<Int> = environmentParameters.nCloud
     val tRx: Double = environmentParameters.tRx
     val pMax: Double = userEquipmentConfig.componentsConfig.pMax
     val numberOfQueues: Int = userEquipmentConfig.numberOfQueues
@@ -139,7 +139,7 @@ data class OffloadingSystemConfig(
     }
 
     fun expectedTCloud(queueIndex: Int): Double {
-        return tRx + nCloud + tTx[queueIndex]
+        return tRx + nCloud[queueIndex] + tTx[queueIndex]
     }
 
     fun expectedTaskTime(queueIndex: Int): Double {

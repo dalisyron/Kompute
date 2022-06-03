@@ -9,7 +9,7 @@ import core.ue.UserEquipmentStateConfig
 object Mock {
 
     fun configFromLiyu(): OffloadingSystemConfig {
-        val environmentParameters = EnvironmentParameters(
+        val environmentParameters = EnvironmentParameters.singleQueue(
             nCloud = 1,
             tRx = 0.0,
         )
@@ -37,7 +37,7 @@ object Mock {
     }
 
     fun simpleConfig(): OffloadingSystemConfig {
-        val environmentParameters = EnvironmentParameters(
+        val environmentParameters = EnvironmentParameters.singleQueue(
             nCloud = 1,
             tRx = 0.0,
         )
@@ -70,13 +70,13 @@ object Mock {
             userEquipmentConfig = UserEquipmentConfig(
                 stateConfig = UserEquipmentStateConfig(
                     taskQueueCapacity = 6,
-                    tuNumberOfPackets = listOf(1, 2),
-                    cpuNumberOfSections = listOf(4, 3),
+                    tuNumberOfPackets = listOf(1, 3),
+                    cpuNumberOfSections = listOf(8, 2),
                     numberOfQueues = 2
                 ),
                 componentsConfig = UserEquipmentComponentsConfig(
-                    alpha = listOf(0.1, 0.2),
-                    beta = 0.9,
+                    alpha = listOf(0.4, 0.9),
+                    beta = 0.95,
                     etaConfig = null,
                     pTx = 1.0,
                     pLocal = 0.8,
@@ -84,8 +84,8 @@ object Mock {
                 )
             ),
             environmentParameters = EnvironmentParameters(
-                nCloud = 1,
-                tRx = 0.0,
+                nCloud = listOf(1, 1),
+                tRx = 0.5,
             )
         )
     }

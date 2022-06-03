@@ -131,3 +131,39 @@ fun Int.pow(n: Int): Int {
         return pw
     }
 }
+
+fun <T> cartesianProduct(lists: List<List<T>>): List<List<T>> {
+    require(lists.isNotEmpty())
+    val first = lists.first()
+    val other = lists.drop(1)
+
+    if (other.isEmpty()) {
+        return listOf(first)
+    }
+
+    if (other.size == 1) {
+        val result = mutableListOf<List<T>>()
+        for (a in first) {
+            for (b in other[0]) {
+                val temp = listOf(a, b)
+                result.add(temp)
+            }
+        }
+        return result
+    }
+
+    val productOther: List<List<T>> = cartesianProduct(other)
+
+    val result = mutableListOf<List<T>>()
+    for (a in first) {
+        for (list in productOther) {
+            result.add(listOf(a) + list)
+        }
+    }
+
+    return result
+}
+
+fun <T : Comparable<T>> List<T>.maxNotEmpty(): T {
+    return requireNotNull(maxOrNull())
+}

@@ -34,92 +34,59 @@ object TransmitOnlyPolicy : Policy {
     }
 }
 
-object GreedyLocalFirstPolicy : Policy {
+abstract class GreedyPolicy : Policy {
 
-    override fun getActionForState(state: UserEquipmentExecutionState): Action {
+    fun getActionForStateGreedy(state: UserEquipmentExecutionState, singleTaskAction: (Int) -> Action): Action {
         if (state.averagePower() > state.pMax) {
             return Action.NoOperation
         }
-        if (state.cpuState != 0 && state.tuState != 0) {
+        if (state.ueState.isCPUActive() && state.ueState.isTUActive()) {
             return Action.NoOperation
         }
-        if (state.cpuState != 0) {
+
+        if (state.taskQueueLength.all { it == 0 }) {
+            return Action.NoOperation
+        }
+
+        if (state.ueState.isCPUActive()) {
             return TransmitOnlyPolicy.getActionForState(state)
         }
-        if (state.tuState != 0) {
+
+        if (state.ueState.isTUActive()) {
             return LocalOnlyPolicy.getActionForState(state)
         }
 
-        val nonEmptyQueueIndices = state.taskQueueLength.mapIndexed { index, i ->
-            if (state.taskQueueLength[index] > 0) index else null
-        }.filterNotNull()
+        val nonEmptyIndices = state.taskQueueLength.indices.filter { state.taskQueueLength[it] > 0 }
+        check(nonEmptyIndices.isNotEmpty())
 
-        if (nonEmptyQueueIndices.isEmpty()) {
-            return Action.NoOperation
+        val queueIndices: Pair<Int, Int>? = state.ueState.getTwoRandomQueueIndicesForTwoTasks()
+
+        if (queueIndices == null) {
+            check(nonEmptyIndices.size == 1)
+            return singleTaskAction(nonEmptyIndices[0])
+        } else {
+            return Action.AddToBothUnits(
+                cpuTaskQueueIndex = queueIndices.first,
+                transmissionUnitTaskQueueIndex = queueIndices.second
+            )
         }
-
-        if (nonEmptyQueueIndices.size == 1) {
-            if (state.taskQueueLength[nonEmptyQueueIndices.first()] == 1) {
-                return LocalOnlyPolicy.getActionForState(state)
-            }
-        }
-
-        for (queueIndexA in nonEmptyQueueIndices.indices) {
-            for (queueIndexB in nonEmptyQueueIndices.indices) {
-                if (queueIndexA != queueIndexB || state.taskQueueLength[nonEmptyQueueIndices[queueIndexA]] > 1) {
-                    return Action.AddToBothUnits(
-                        cpuTaskQueueIndex = nonEmptyQueueIndices[queueIndexA],
-                        transmissionUnitTaskQueueIndex = nonEmptyQueueIndices[queueIndexB]
-                    )
-                }
-            }
-        }
-
-        throw IllegalStateException()
     }
 }
 
-object GreedyOffloadFirstPolicy : Policy {
+object GreedyLocalFirstPolicy : GreedyPolicy() {
 
     override fun getActionForState(state: UserEquipmentExecutionState): Action {
-        if (state.averagePower() > state.pMax) {
-            return Action.NoOperation
+        return getActionForStateGreedy(state) { queueIndex ->
+            Action.AddToCPU(queueIndex)
         }
-        if (state.cpuState != 0 && state.tuState != 0) {
-            return Action.NoOperation
-        }
-        if (state.cpuState != 0) {
-            return TransmitOnlyPolicy.getActionForState(state)
-        }
-        if (state.tuState != 0) {
-            return LocalOnlyPolicy.getActionForState(state)
-        }
+    }
+}
 
-        val nonEmptyQueueIndices = state.taskQueueLength.mapIndexed { index, i ->
-            if (state.taskQueueLength[index] > 0) index else null
-        }.filterNotNull()
+object GreedyOffloadFirstPolicy : GreedyPolicy() {
 
-        if (nonEmptyQueueIndices.isEmpty()) {
-            return Action.NoOperation
+    override fun getActionForState(state: UserEquipmentExecutionState): Action {
+        return getActionForStateGreedy(state) { queueIndex ->
+            Action.AddToTransmissionUnit(queueIndex)
         }
-
-        if (nonEmptyQueueIndices.size == 1) {
-            if (state.taskQueueLength[nonEmptyQueueIndices.first()] == 1) {
-                return TransmitOnlyPolicy.getActionForState(state)
-            }
-        }
-
-        for (queueIndexA in nonEmptyQueueIndices.indices) {
-            for (queueIndexB in nonEmptyQueueIndices.indices) {
-                if (queueIndexA != queueIndexB || state.taskQueueLength[nonEmptyQueueIndices[queueIndexA]] > 1) {
-                    return Action.AddToBothUnits(
-                        cpuTaskQueueIndex = nonEmptyQueueIndices[queueIndexA],
-                        transmissionUnitTaskQueueIndex = nonEmptyQueueIndices[queueIndexB]
-                    )
-                }
-            }
-        }
-
-        throw IllegalStateException()
     }
 }

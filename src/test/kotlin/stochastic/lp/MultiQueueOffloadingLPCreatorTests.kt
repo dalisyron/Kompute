@@ -39,7 +39,7 @@ class MultiQueueOffloadingLPCreatorTests {
     }
 
     fun getSimpleConfig(): OffloadingSystemConfig {
-        val environmentParameters = EnvironmentParameters(
+        val environmentParameters = EnvironmentParameters.singleQueue(
             nCloud = 1,
             tRx = 0.0,
         )
