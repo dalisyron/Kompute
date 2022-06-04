@@ -1,4 +1,4 @@
-package stochastic.policy
+package tester
 
 import com.google.common.truth.Truth
 import core.ue.OffloadingSystemConfig
@@ -6,7 +6,7 @@ import core.ue.OffloadingSystemConfig.Companion.withEtaConfigSingleQueue
 import simulation.simulation.Simulator
 import stochastic.lp.RangedOptimalPolicyFinder
 
-class TestFixedEtaEstimateSimulationCompare(
+class FixedEtaEstimateSimulationCompareTester(
     private val etaStart: Double,
     private val etaEnd: Double,
     private val sampleCount: Int,

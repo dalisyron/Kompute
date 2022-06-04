@@ -27,6 +27,8 @@ import org.junit.jupiter.api.Assertions
 import simulation.app.Mock
 import stochastic.lp.IneffectivePolicyException
 import stochastic.lp.RangedOptimalPolicyFinder
+import tester.RangedAlphaStochasticPolicyTester
+import tester.FixedEtaEstimateSimulationCompareTester
 
 class TestStochasticPolicy {
 
@@ -84,7 +86,7 @@ class TestStochasticPolicy {
     fun testCompareSimulationWithLPForEta() {
         val baseConfig = getSimpleConfig().withTaskQueueCapacity(20)
 
-        val tester = TestFixedEtaEstimateSimulationCompare(
+        val tester = FixedEtaEstimateSimulationCompareTester(
             etaStart = 0.1,
             etaEnd = 0.28,
             sampleCount = 28,
@@ -108,7 +110,7 @@ class TestStochasticPolicy {
                 .withTaskQueueCapacity(100)
                 .withPMax(200.0)
 
-        val tester = TestFixedEtaEstimateSimulationCompare(
+        val tester = FixedEtaEstimateSimulationCompareTester(
             etaStart = 0.6,
             etaEnd = 0.6,
             sampleCount = 1,

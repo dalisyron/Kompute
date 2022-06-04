@@ -5,7 +5,7 @@ import core.plot.PlotterFixedAndRanging
 import simulation.app.Mock
 import core.policy.AlphaRange
 import org.junit.jupiter.api.Test
-import stochastic.policy.MultiQueueRangedAlphaTester
+import tester.MultiQueueRangedAlphaTester
 
 class TestDoubleQueueFixedAndVariable {
 

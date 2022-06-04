@@ -7,7 +7,7 @@ import core.ue.OffloadingSystemConfig.Companion.withNumberOfSections
 import core.ue.OffloadingSystemConfig.Companion.withTaskQueueCapacity
 import org.junit.jupiter.api.Test
 import simulation.app.Mock
-import stochastic.policy.MultiQueueRangedAlphaTester
+import tester.MultiQueueRangedAlphaTester
 import kotlin.system.measureTimeMillis
 
 class TestDoubleQueueFixedAndVariable2 {

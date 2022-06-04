@@ -1,4 +1,4 @@
-package stochastic.policy
+package tester
 
 import com.github.sh0nk.matplotlib4j.Plot
 import com.google.common.truth.Truth

@@ -1,4 +1,4 @@
-package stochastic.policy
+package tester
 
 import com.google.common.truth.Truth
 import core.cartesianProduct
