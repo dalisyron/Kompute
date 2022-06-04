@@ -17,7 +17,7 @@ object LocalOnlyPolicy : Policy {
     }
 }
 
-object TransmitOnlyPolicy : Policy {
+object OffloadOnlyPolicy : Policy {
 
     override fun getActionForState(state: UserEquipmentExecutionState): Action {
         if (state.averagePower() > state.pMax || state.tuState != 0) {
@@ -49,7 +49,7 @@ abstract class GreedyPolicy : Policy {
         }
 
         if (state.ueState.isCPUActive()) {
-            return TransmitOnlyPolicy.getActionForState(state)
+            return OffloadOnlyPolicy.getActionForState(state)
         }
 
         if (state.ueState.isTUActive()) {

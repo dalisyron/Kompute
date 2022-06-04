@@ -24,6 +24,15 @@ fun mutableListOfZeros(size: Int): MutableList<Double> {
     return result
 }
 
+fun mutableListOfInt(size: Int, value: Int): MutableList<Int> {
+    val result: MutableList<Int> = mutableListOf()
+
+    for (i in 0 until size) {
+        result.add(value)
+    }
+    return result
+}
+
 fun withProbability(p: Double, block: () -> Unit) {
     val rand = Random.nextDouble()
 
@@ -207,4 +216,8 @@ fun List<Int>.toCumulative(): List<Int> {
     }
 
     return result
+}
+
+fun Boolean.toInt(): Int {
+    return if (this) 1 else 0
 }

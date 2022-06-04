@@ -29,7 +29,7 @@ class FixedEtaEstimateSimulationCompareTester(
         etas.forEach {
             println("testing for eta = $it")
             val config = baseSystemConfig.withEtaConfigSingleQueue(it)
-            val optimalPolicy = RangedOptimalPolicyFinder.findOptimalPolicyForGivenEta(config)
+            val optimalPolicy = RangedOptimalPolicyFinder.findOptimalPolicy(config)
 
             val averageDelayEstimate = optimalPolicy.averageDelay
             val simulator = Simulator(config)

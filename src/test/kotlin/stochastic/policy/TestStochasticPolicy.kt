@@ -5,7 +5,7 @@ import core.policy.GreedyOffloadFirstPolicy
 import core.environment.EnvironmentParameters
 import core.policy.GreedyLocalFirstPolicy
 import core.policy.LocalOnlyPolicy
-import core.policy.TransmitOnlyPolicy
+import core.policy.OffloadOnlyPolicy
 import org.junit.jupiter.api.Test
 import simulation.simulation.Simulator
 import core.ue.OffloadingSystemConfig
@@ -64,7 +64,7 @@ class TestStochasticPolicy {
     @Category(SlowTests::class)
     fun testPolicyAverageBetterThanGreedyOffloadFirst() {
         val simpleConfig = getSimpleConfig().withTaskQueueCapacity(10).withEtaConfigSingleQueue(1e-9)
-        val stochasticPolicy = RangedOptimalPolicyFinder.findOptimalPolicyForGivenEta(
+        val stochasticPolicy = RangedOptimalPolicyFinder.findOptimalPolicy(
             simpleConfig,
             50
         ) // 25 was 7.53 // 100 was 7.92 // 25 was 7.50 // 100 was 7.95
@@ -131,10 +131,10 @@ class TestStochasticPolicy {
         for (alpha in alphas) {
             val config = baseConfig.withAlphaSingleQueue(alpha)
             val simulator = Simulator(config)
-            val stochastic = RangedOptimalPolicyFinder.findOptimalPolicyForGivenEta(config, 100)
+            val stochastic = RangedOptimalPolicyFinder.findOptimalPolicy(config, 100)
 
             val localOnlyDelay = simulator.simulatePolicy(LocalOnlyPolicy, simulationTicks).averageDelay
-            val offloadOnlyDelay = simulator.simulatePolicy(TransmitOnlyPolicy, simulationTicks).averageDelay
+            val offloadOnlyDelay = simulator.simulatePolicy(OffloadOnlyPolicy, simulationTicks).averageDelay
             val greedyOffloadFirstDelay =
                 simulator.simulatePolicy(GreedyOffloadFirstPolicy, simulationTicks).averageDelay
             val greedyLocalFirstDelay = simulator.simulatePolicy(GreedyLocalFirstPolicy, simulationTicks).averageDelay
@@ -156,9 +156,9 @@ class TestStochasticPolicy {
         val config = Mock.configFromLiyu().withEtaConfigSingleQueue(0.0).withAlphaSingleQueue(0.01)
         val simulator = Simulator(config)
         val simulationTicks = 10_000_000
-        val stochasticPolicy: StochasticOffloadingPolicy = RangedOptimalPolicyFinder.findOptimalPolicyForGivenEta(config)
+        val stochasticPolicy: StochasticOffloadingPolicy = RangedOptimalPolicyFinder.findOptimalPolicy(config)
 
-        val offloadOnlyDelay = simulator.simulatePolicy(TransmitOnlyPolicy, simulationTicks).averageDelay
+        val offloadOnlyDelay = simulator.simulatePolicy(OffloadOnlyPolicy, simulationTicks).averageDelay
         val stochasticDelay = simulator.simulatePolicy(stochasticPolicy, simulationTicks).averageDelay
         // println(stochasticPolicy)
 
@@ -319,10 +319,10 @@ class TestStochasticPolicy {
             .withPTx(1.5)
             .withTaskQueueCapacity(30)
 
-        val stochasticPolicy = RangedOptimalPolicyFinder.findOptimalPolicyForGivenEta(systemConfig, 100)
+        val stochasticPolicy = RangedOptimalPolicyFinder.findOptimalPolicy(systemConfig, 100)
         val simulator = Simulator(systemConfig)
         val stochasticPolicyDelayActual = simulator.simulatePolicy(stochasticPolicy, 1_000_000).averageDelay
-        val offloadOnlyDelay = simulator.simulatePolicy(TransmitOnlyPolicy, 1_000_000).averageDelay
+        val offloadOnlyDelay = simulator.simulatePolicy(OffloadOnlyPolicy, 1_000_000).averageDelay
 
         assertThat(stochasticPolicyDelayActual * 0.99)
             .isLessThan(offloadOnlyDelay)
@@ -338,7 +338,7 @@ class TestStochasticPolicy {
 
         val simulationTicks = 2_000_000
         val simulator = Simulator(systemConfig)
-        val optimalStochasticPolicy = RangedOptimalPolicyFinder.findOptimalPolicyForGivenEta(
+        val optimalStochasticPolicy = RangedOptimalPolicyFinder.findOptimalPolicy(
             baseSystemConfig = systemConfig,
             precision = 100
         )
@@ -364,7 +364,7 @@ class TestStochasticPolicy {
             .withTaskQueueCapacity(40)
 
         Assertions.assertThrows(IneffectivePolicyException::class.java) {
-            val stochasticOffloadOnly = RangedOptimalPolicyFinder.findOptimalPolicyForGivenEta(systemConfig)
+            val stochasticOffloadOnly = RangedOptimalPolicyFinder.findOptimalPolicy(systemConfig)
         }
     }
 
@@ -425,7 +425,7 @@ class TestStochasticPolicy {
 
     @Test
     fun testSingleEta() {
-        val stochasticPolicy = RangedOptimalPolicyFinder.findOptimalPolicyForGivenEta(
+        val stochasticPolicy = RangedOptimalPolicyFinder.findOptimalPolicy(
             Mock.configFromLiyu().withAlphaSingleQueue(0.10)
                 .withEtaConfigSingleQueue(0.05)
         )

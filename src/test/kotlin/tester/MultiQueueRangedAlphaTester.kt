@@ -132,11 +132,11 @@ class MultiQueueRangedAlphaTester (
     private fun getDelaysForAlpha(alpha: List<Double>): AlphaDelayResult {
         val config = baseSystemConfig.withAlpha(alpha)
         val simulator = Simulator(config)
-        val stochastic = RangedOptimalPolicyFinder.findOptimalPolicyForGivenEta(config, precision)
+        val stochastic = RangedOptimalPolicyFinder.findOptimalPolicy(config, precision)
         println("Running simulations for alpha = $alpha")
 
         val localOnlyDelay = simulator.simulatePolicy(LocalOnlyPolicy, simulationTicks).averageDelay
-        val offloadOnlyDelay = simulator.simulatePolicy(TransmitOnlyPolicy, simulationTicks).averageDelay
+        val offloadOnlyDelay = simulator.simulatePolicy(OffloadOnlyPolicy, simulationTicks).averageDelay
         val greedyOffloadFirstDelay =
             simulator.simulatePolicy(GreedyOffloadFirstPolicy, simulationTicks).averageDelay
         val greedyLocalFirstDelay =

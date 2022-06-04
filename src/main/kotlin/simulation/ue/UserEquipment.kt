@@ -17,7 +17,8 @@ class UserEquipment(
     private val config: OffloadingSystemConfig
 ) {
     private val stateManager = UserEquipmentStateManager(config.getStateManagerConfig())
-
+    val allStates = stateManager.allStates()
+    var queueFullTimeSlotCounter = 0
 
     var state: UserEquipmentState = stateManager.getInitialState()
     var logger: Logger? = null
@@ -26,6 +27,9 @@ class UserEquipment(
     var consumedPower: Double = 0.0
 
     fun tick(action: Action) {
+        if (state.taskQueueLengths.any { it == config.taskQueueCapacity } && action != Action.NoOperation) {
+            queueFullTimeSlotCounter++
+        }
         executeAction(action)
         timeSlot += 1
     }
@@ -102,6 +106,7 @@ class UserEquipment(
         logger?.reset()
         consumedPower = 0.0
         timeSlot = 0
+        queueFullTimeSlotCounter = 0
     }
 
 }

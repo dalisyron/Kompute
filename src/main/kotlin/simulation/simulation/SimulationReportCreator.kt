@@ -46,15 +46,20 @@ class SimulationReportCreator(
         // val averageTransmissionTime = transmissionTimes.average()
         // println("averageTransmissionTime = $averageTransmissionTime")
 
+        val isEffective =  (reportInfo.numberOfQueueFullTimeSlots.toDouble() / reportInfo.numberOfTimeSlots.toDouble()) > (1.0 / reportInfo.stateCount.toDouble())
+
         return SimulationReport(
             averageDelay = averageDelay,
-            averagePowerConsumption = totalConsumedPower / timeSlots
+            averagePowerConsumption = totalConsumedPower / timeSlots,
+            isEffective = isEffective
         )
     }
 
     data class ReportInfo(
         val events: List<Event>,
         val totalConsumedPower: Double,
-        val numberOfTimeSlots: Int
+        val numberOfTimeSlots: Int,
+        val numberOfQueueFullTimeSlots: Int,
+        val stateCount: Int
     )
 }

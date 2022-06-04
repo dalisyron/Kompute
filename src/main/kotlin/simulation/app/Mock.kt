@@ -89,4 +89,29 @@ object Mock {
             )
         )
     }
+
+    fun doubleConfigHeavyLight(): OffloadingSystemConfig {
+        return OffloadingSystemConfig(
+            userEquipmentConfig = UserEquipmentConfig(
+                stateConfig = UserEquipmentStateConfig(
+                    taskQueueCapacity = 5,
+                    tuNumberOfPackets = listOf(1, 3),
+                    cpuNumberOfSections = listOf(7, 2),
+                    numberOfQueues = 2
+                ),
+                componentsConfig = UserEquipmentComponentsConfig(
+                    alpha = listOf(0.4, 0.9),
+                    beta = 0.90,
+                    etaConfig = null,
+                    pTx = 1.0,
+                    pLocal = 0.8,
+                    pMax = 1.7
+                )
+            ),
+            environmentParameters = EnvironmentParameters(
+                nCloud = listOf(1, 1),
+                tRx = 0.5,
+            )
+        )
+    }
 }

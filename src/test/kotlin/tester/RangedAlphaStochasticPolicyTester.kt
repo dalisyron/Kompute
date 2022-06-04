@@ -5,7 +5,7 @@ import com.google.common.truth.Truth
 import core.policy.GreedyLocalFirstPolicy
 import core.policy.GreedyOffloadFirstPolicy
 import core.policy.LocalOnlyPolicy
-import core.policy.TransmitOnlyPolicy
+import core.policy.OffloadOnlyPolicy
 import core.ue.OffloadingSystemConfig
 import core.ue.OffloadingSystemConfig.Companion.withAlphaSingleQueue
 import simulation.simulation.Simulator
@@ -47,11 +47,11 @@ class RangedAlphaStochasticPolicyTester(
         for (alpha in alphas) {
             val config = baseSystemConfig.withAlphaSingleQueue(alpha)
             val simulator = Simulator(config)
-            val stochastic = RangedOptimalPolicyFinder.findOptimalPolicyForGivenEta(config, precision)
+            val stochastic = RangedOptimalPolicyFinder.findOptimalPolicy(config, precision)
             println("Running simulations for alpha = $alpha")
 
             val localOnlyDelay = simulator.simulatePolicy(LocalOnlyPolicy, simulationTicks).averageDelay
-            val offloadOnlyDelay = simulator.simulatePolicy(TransmitOnlyPolicy, simulationTicks).averageDelay
+            val offloadOnlyDelay = simulator.simulatePolicy(OffloadOnlyPolicy, simulationTicks).averageDelay
             val greedyOffloadFirstDelay =
                 simulator.simulatePolicy(GreedyOffloadFirstPolicy, simulationTicks).averageDelay
             val greedyLocalFirstDelay =

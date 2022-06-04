@@ -37,7 +37,9 @@ class Simulator(
             SimulationReportCreator.ReportInfo(
                 events = logger.events,
                 totalConsumedPower = userEquipment.consumedPower,
-                numberOfTimeSlots = numberOfTimeSlots
+                numberOfTimeSlots = numberOfTimeSlots,
+                numberOfQueueFullTimeSlots = userEquipment.queueFullTimeSlotCounter,
+                stateCount = userEquipment.allStates.size
             )
         )
     }
