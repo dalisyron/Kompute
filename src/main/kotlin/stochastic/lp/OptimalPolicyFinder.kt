@@ -22,12 +22,14 @@ object RangedOptimalPolicyFinder {
         require(baseSystemConfig.eta == null)
 
         var i = 1
+        val equation4RowsCacheByEtaType: MutableMap<OffloadingEtaType, List<EquationRow>> = mutableMapOf()
+
         for (etaConfig in etaConfigs) {
             val systemConfigWithEtas = baseSystemConfig.withEtaConfig(etaConfig)
             println("cycle $i of ${etaConfigs.size} | etaConfig = $etaConfig | alpha = ${baseSystemConfig.alpha}")
             i++
             try {
-                val optimalPolicyWithGivenEta = findOptimalPolicy(systemConfigWithEtas, true)
+                val optimalPolicyWithGivenEta = findOptimalPolicyWithGivenEta(systemConfigWithEtas, equation4RowsCacheByEtaType)
 
                 if (optimalPolicy == null || optimalPolicyWithGivenEta.averageDelay < optimalPolicy.averageDelay) {
                     optimalPolicy = optimalPolicyWithGivenEta
@@ -45,11 +47,12 @@ object RangedOptimalPolicyFinder {
     }
 
 
-    fun findOptimalPolicy(
+    fun findOptimalPolicyWithGivenEta(
         systemConfig: OffloadingSystemConfig,
-        useEquationCache: Boolean = false
+        equation4RowsCacheByEtaType: MutableMap<OffloadingEtaType, List<EquationRow>>? = null
     ): StochasticOffloadingPolicy {
-        val optimalConfig = OffloadingSolver(systemConfig).findOptimalStochasticConfig(useEquationCache)
+        require(systemConfig.eta != null)
+        val optimalConfig = OffloadingSolver(systemConfig, equation4RowsCacheByEtaType).findOptimalStochasticConfig()
 
         return StochasticOffloadingPolicy(
             systemConfig = systemConfig,
@@ -60,21 +63,22 @@ object RangedOptimalPolicyFinder {
 }
 
 class OffloadingSolver(
-    private val systemConfig: OffloadingSystemConfig
+    private val systemConfig: OffloadingSystemConfig,
+    private val equation4CacheByEtaType: MutableMap<OffloadingEtaType, List<EquationRow>>? = null
 ) {
 
     private val allStates: List<UserEquipmentState> = UserEquipmentStateManager.getAllStatesForConfig(systemConfig)
 
-    fun findOptimalStochasticConfig(useEquationCache: Boolean = false): StochasticPolicyConfig {
+    fun findOptimalStochasticConfig(): StochasticPolicyConfig {
         val offloadingLPCreator = OffloadingLPCreator(systemConfig)
         lateinit var standardLinearProgram: StandardLinearProgram
         lateinit var offloadingLP: OffloadingLinearProgram
 
         val creationTime: Long = measureTimeMillis {
             val etaType: OffloadingEtaType = OffloadingEtaType.fromEtaConfig(systemConfig.eta!!)
-            val equation4Cache = equation4RowsCache[etaType]
+            val equation4Cache = equation4CacheByEtaType?.get(etaType)
 
-            if (useEquationCache && equation4Cache != null) {
+            if (equation4Cache != null) {
                 offloadingLP = offloadingLPCreator.createOffloadingLinearProgramExcludingEquation4()
                 val rows = offloadingLP.standardLinearProgram.rows.toMutableList()
                 for (i in allStates.indices) {
@@ -85,7 +89,9 @@ class OffloadingSolver(
             } else {
                 offloadingLP = offloadingLPCreator.createOffloadingLinearProgram()
                 standardLinearProgram = offloadingLP.standardLinearProgram
-                updateCache(standardLinearProgram, etaType)
+                if (equation4CacheByEtaType != null) {
+                    updateCache(standardLinearProgram, etaType)
+                }
             }
         }
 
@@ -106,9 +112,11 @@ class OffloadingSolver(
         return policyConfig
     }
 
-    @Synchronized
-    private fun updateCache(standardLinearProgram: StandardLinearProgram, etaType: OffloadingEtaType) {
-        equation4RowsCache[etaType] = standardLinearProgram.rows.subList(
+    private fun updateCache(
+        standardLinearProgram: StandardLinearProgram,
+        etaType: OffloadingEtaType
+    ) {
+        equation4CacheByEtaType!![etaType] = standardLinearProgram.rows.subList(
             2 + systemConfig.numberOfQueues,
             2 + systemConfig.numberOfQueues + allStates.size
         ).requireNoNulls()
@@ -200,10 +208,6 @@ class OffloadingSolver(
             stateActionProbabilities = stateActionProbabilities
         )
 
-    }
-
-    companion object {
-        var equation4RowsCache: MutableMap<OffloadingEtaType, List<EquationRow>> = mutableMapOf()
     }
 }
 

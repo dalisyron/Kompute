@@ -14,7 +14,7 @@ class TestDoubleQueueEffectivePercent {
     @Test
     fun testCompareConcurrentWithSingleThread() {
         val tester = PolicyEffectivenessTester(
-            baseSystemConfig = Mock.doubleConfigHeavyLight().withNumberOfSections(listOf(3, 2)).withTaskQueueCapacity(6),
+            baseSystemConfig = Mock.doubleConfigHeavyLight().withNumberOfSections(listOf(3, 2)).withTaskQueueCapacity(5),
             alphaRanges = listOf(AlphaRange.Constant(0.2), AlphaRange.Variable(0.01, 0.3, 10)),
             precision = 4,
             simulationTicks = 1_000_000

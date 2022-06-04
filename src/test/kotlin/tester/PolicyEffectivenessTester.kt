@@ -64,11 +64,11 @@ class PolicyEffectivenessTester(
         }
 
         return Result(
-            stochasticEffectivePercent = stochasticEffectiveCount.toDouble() / alphaCombinations.size,
-            localOnlyEffectivePercent = localOnlyEffectiveCount.toDouble() / alphaCombinations.size,
-            offloadOnlyEffectivePercent = offloadOnlyEffectiveCount.toDouble() / alphaCombinations.size,
-            greedyOffloadFirstEffectivePercent = greedyOffloadFirstEffectiveCount.toDouble() / alphaCombinations.size,
-            greedyLocalFirstEffectivePercent = greedyLocalFirstEffectiveCount.toDouble() / alphaCombinations.size
+            stochasticEffectivePercent = (stochasticEffectiveCount.toDouble() / alphaCombinations.size) * 100.0,
+            localOnlyEffectivePercent = (localOnlyEffectiveCount.toDouble() / alphaCombinations.size) * 100.0,
+            offloadOnlyEffectivePercent = (offloadOnlyEffectiveCount.toDouble() / alphaCombinations.size) * 100.0,
+            greedyOffloadFirstEffectivePercent = (greedyOffloadFirstEffectiveCount.toDouble() / alphaCombinations.size) * 100.0,
+            greedyLocalFirstEffectivePercent = (greedyLocalFirstEffectiveCount.toDouble() / alphaCombinations.size) * 100.0
         )
     }
 
@@ -97,9 +97,12 @@ class PolicyEffectivenessTester(
                         val simulationReportStochastic = simulator.simulatePolicy(stochasticPolicy, simulationTicks)
                         if (simulationReportStochastic.isEffective) {
                             stochasticIsEffective[alphaIndex] = 1
+                        } else {
+                            stochasticIsEffective[alphaIndex] = 0
                         }
 
                     } catch (_: NoEffectivePolicyFoundException) {
+                        stochasticIsEffective[alphaIndex] = 0
                     }
 
                     val simulationReportLocalOnly = simulator.simulatePolicy(LocalOnlyPolicy, simulationTicks)

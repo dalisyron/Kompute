@@ -156,7 +156,7 @@ class TestStochasticPolicy {
         val config = Mock.configFromLiyu().withEtaConfigSingleQueue(0.0).withAlphaSingleQueue(0.01)
         val simulator = Simulator(config)
         val simulationTicks = 10_000_000
-        val stochasticPolicy: StochasticOffloadingPolicy = RangedOptimalPolicyFinder.findOptimalPolicy(config)
+        val stochasticPolicy: StochasticOffloadingPolicy = RangedOptimalPolicyFinder.findOptimalPolicyWithGivenEta(config)
 
         val offloadOnlyDelay = simulator.simulatePolicy(OffloadOnlyPolicy, simulationTicks).averageDelay
         val stochasticDelay = simulator.simulatePolicy(stochasticPolicy, simulationTicks).averageDelay
@@ -364,7 +364,7 @@ class TestStochasticPolicy {
             .withTaskQueueCapacity(40)
 
         Assertions.assertThrows(IneffectivePolicyException::class.java) {
-            val stochasticOffloadOnly = RangedOptimalPolicyFinder.findOptimalPolicy(systemConfig)
+            val stochasticOffloadOnly = RangedOptimalPolicyFinder.findOptimalPolicyWithGivenEta(systemConfig)
         }
     }
 
@@ -425,7 +425,7 @@ class TestStochasticPolicy {
 
     @Test
     fun testSingleEta() {
-        val stochasticPolicy = RangedOptimalPolicyFinder.findOptimalPolicy(
+        val stochasticPolicy = RangedOptimalPolicyFinder.findOptimalPolicyWithGivenEta(
             Mock.configFromLiyu().withAlphaSingleQueue(0.10)
                 .withEtaConfigSingleQueue(0.05)
         )
