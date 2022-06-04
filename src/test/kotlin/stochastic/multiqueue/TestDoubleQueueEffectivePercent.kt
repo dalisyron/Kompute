@@ -50,5 +50,7 @@ class TestDoubleQueueEffectivePercent {
             .of(resultsConcurrent.stochasticEffectivePercent)
 
         println("Single thread running time = $millisSingle | Multi thread running time = $millisConcurrent")
+
+        // Run in 5d8cec1: Single thread running time = 218994 | Multi thread running time = 100750
     }
 }
