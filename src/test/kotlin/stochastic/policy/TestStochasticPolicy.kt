@@ -410,14 +410,14 @@ class TestStochasticPolicy {
     @Test
     fun testSampleFromLiyuLimitedPower() {
         val tester = RangedAlphaStochasticPolicyTester(
-            baseSystemConfig = Mock.configFromLiyu().withTaskQueueCapacity(12).withPMax(1.2),
-            alphaStart = 0.01,
+            baseSystemConfig = Mock.configFromLiyu().withTaskQueueCapacity(30).withPMax(1.2),
+            alphaStart = 0.40,
             alphaEnd = 0.40,
-            alphaSampleCount = 20,
-            precision = 50,
-            simulationTicks = 1_000_000 ,
-            plotEnabled = true,
-            assertionsEnabled = false
+            alphaSampleCount = 1,
+            precision = 200,
+            simulationTicks = 3_000_000 ,
+            plotEnabled = false,
+            assertionsEnabled = true
         )
 
         tester.run()

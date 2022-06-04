@@ -10,8 +10,11 @@ import core.ue.UserEquipmentStateConfig
 import org.junit.jupiter.api.Test
 import org.junit.experimental.categories.Category
 import core.ue.OffloadingSystemConfig.Companion.withAlphaSingleQueue
+import core.ue.OffloadingSystemConfig.Companion.withEtaConfig
 import core.ue.OffloadingSystemConfig.Companion.withEtaConfigSingleQueue
 import core.ue.OffloadingSystemConfig.Companion.withNumberOfSectionsSingleQueue
+import simulation.app.Mock
+import stochastic.lp.OffloadingLPCreator
 import stochastic.lp.RangedOptimalPolicyFinder
 
 interface PerformanceTests
@@ -83,5 +86,12 @@ class StochasticPerformanceTests {
         val config = getSimpleConfig().withAlphaSingleQueue(0.1).withBeta(0.9).withTaskQueueCapacity(50)
         val optimalPolicy = RangedOptimalPolicyFinder.findOptimalPolicyWithGivenEta(config)
         println(optimalPolicy.averageDelay)
+    }
+
+    @Test
+    fun testCreateLargeLP() {
+        val config = Mock.doubleConfigHeavyLight()
+        val lp = OffloadingLPCreator(config.withEtaConfig(listOf(0.3, 0.1))).createOffloadingLinearProgram()
+        // Runtime in L was 12528 ms
     }
 }

@@ -66,7 +66,7 @@ class TestDoubleQueueDelayRanking {
             assertionsEnabled = true
         )
 
-        val result = tester.runConcurrent(12)
+        val result = tester.run()
 
         println("===============\nResult is:$result\n===============")
     }
