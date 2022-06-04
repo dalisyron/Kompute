@@ -55,4 +55,19 @@ class TestDoubleQueueDelayRanking {
 
         // Run in 5d8cec1: Single thread running time = 218994 | Multi thread running time = 100750
     }
+
+    @Test
+    fun testHeavyLight1() {
+        val tester = PolicyRankingTester(
+            baseSystemConfig = Mock.doubleConfigHeavyLight().withTaskQueueCapacity(7),
+            alphaRanges = listOf(AlphaRange.Constant(0.2), AlphaRange.Variable(0.01, 0.3, 20)),
+            precision = 10,
+            simulationTicks = 2_000_000,
+            assertionsEnabled = true
+        )
+
+        val result = tester.runConcurrent(12)
+
+        println("===============\nResult is:$result\n===============")
+    }
 }

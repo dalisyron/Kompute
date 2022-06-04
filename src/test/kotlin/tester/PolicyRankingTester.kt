@@ -80,7 +80,7 @@ class PolicyRankingTester(
         val alphaCombinations: List<List<Double>> = cartesianProduct(alphaRanges.map { it.toList() })
         alphaCount = alphaCombinations.size
 
-        val threadCount = Integer.min(Integer.min(numberOfThreads, 8), alphaCombinations.size)
+        val threadCount = Integer.min(Integer.min(numberOfThreads, 12), alphaCombinations.size)
         val alphaBatches = alphaCombinations.splitEqual(threadCount)
 
         val threads = (0 until threadCount).map {
