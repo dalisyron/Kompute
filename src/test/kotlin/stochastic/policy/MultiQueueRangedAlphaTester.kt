@@ -3,10 +3,7 @@ package stochastic.policy
 import com.google.common.truth.Truth
 import core.cartesianProduct
 import core.mutableListOfZeros
-import core.policy.GreedyLocalFirstPolicy
-import core.policy.GreedyOffloadFirstPolicy
-import core.policy.LocalOnlyPolicy
-import core.policy.TransmitOnlyPolicy
+import core.policy.*
 import core.splitEqual
 import core.toCumulative
 import core.ue.OffloadingSystemConfig
@@ -14,38 +11,6 @@ import core.ue.OffloadingSystemConfig.Companion.withAlpha
 import simulation.simulation.Simulator
 import stochastic.lp.RangedOptimalPolicyFinder
 import kotlin.concurrent.thread
-
-sealed class AlphaRange {
-
-    abstract fun toList(): List<Double>
-
-    data class Constant(val value: Double) : AlphaRange() {
-        init {
-            require(value > 0 && value <= 1.0)
-        }
-
-        override fun toList(): List<Double> = listOf(value)
-    }
-
-    data class Variable(val start: Double, val end: Double, val count: Int) : AlphaRange() {
-        init {
-            require(start > 0 && start <= 1.0)
-            require(end > 0 && end <= 1.0)
-            if (count == 1) {
-                require(start == end)
-            }
-        }
-
-        override fun toList(): List<Double> {
-            if (count == 1) {
-                return listOf(start)
-            }
-            return (0 until count).map { i ->
-                start + i * ((end - start) / (count - 1))
-            }
-        }
-    }
-}
 
 class MultiQueueRangedAlphaTester (
     private val baseSystemConfig: OffloadingSystemConfig,
@@ -59,16 +24,7 @@ class MultiQueueRangedAlphaTester (
         require(alphaRanges.isNotEmpty())
     }
 
-    data class Result(
-        val alphaRanges: List<AlphaRange>,
-        val localOnlyDelays: List<Double>,
-        val offloadOnlyDelays: List<Double>,
-        val greedyOffloadFirstDelays: List<Double>,
-        val greedyLocalFirstDelays: List<Double>,
-        val stochasticDelays: List<Double>,
-    )
-
-    fun run(): Result {
+    fun run(): AlphaDelayResults {
         val alphaCombinations: List<List<Double>> = cartesianProduct(alphaRanges.map { it.toList() })
 
         val localOnlyDelays: MutableList<Double> = mutableListOf()
@@ -93,7 +49,7 @@ class MultiQueueRangedAlphaTester (
             }
         }
 
-        return Result(
+        return AlphaDelayResults(
             alphaRanges = alphaRanges,
             localOnlyDelays = localOnlyDelays,
             offloadOnlyDelays = offloadOnlyDelays,
@@ -103,7 +59,7 @@ class MultiQueueRangedAlphaTester (
         )
     }
 
-    fun runConcurrent(numberOfThreads: Int): Result {
+    fun runConcurrent(numberOfThreads: Int): AlphaDelayResults {
         val alphaCombinations: List<List<Double>> = cartesianProduct(alphaRanges.map { it.toList() })
         val alphaCount = alphaCombinations.size
 
@@ -153,7 +109,7 @@ class MultiQueueRangedAlphaTester (
         threads.forEach {
             it.join()
         }
-        return Result(
+        return AlphaDelayResults(
             alphaRanges = alphaRanges,
             localOnlyDelays = localOnlyDelays,
             offloadOnlyDelays = offloadOnlyDelays,
