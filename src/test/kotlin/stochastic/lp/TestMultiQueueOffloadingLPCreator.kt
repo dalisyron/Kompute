@@ -7,9 +7,9 @@ import core.environment.EnvironmentParameters
 import core.mutableListOfZeros
 import core.pow
 import core.ue.*
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
-class MultiQueueOffloadingLPCreatorTests {
+class TestMultiQueueOffloadingLPCreator {
 
     companion object {
         fun DoubleSubject.isApproxEqualTo(value: Double) {

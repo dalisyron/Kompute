@@ -5,7 +5,7 @@ import core.policy.AlphaDelayResults
 import core.policy.AlphaRange
 import core.ue.OffloadingSystemConfig.Companion.withNumberOfSections
 import core.ue.OffloadingSystemConfig.Companion.withTaskQueueCapacity
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import simulation.app.Mock
 import stochastic.policy.MultiQueueRangedAlphaTester
 import kotlin.system.measureTimeMillis

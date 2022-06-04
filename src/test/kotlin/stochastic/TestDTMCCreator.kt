@@ -7,12 +7,12 @@ import stochastic.dtmc.DTMCCreator
 import stochastic.dtmc.transition.Edge
 import core.symbol.ParameterSymbol
 import core.symbol.Symbol
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import core.policy.Action
 import core.ue.UserEquipmentState
 import core.ue.UserEquipmentStateConfig
 
-internal class DTMCCreatorTests {
+internal class TestDTMCCreator {
     private val sampleStateConfig1 = UserEquipmentStateConfig.singleQueue(
         taskQueueCapacity = 5,
         tuNumberOfPackets = 4,

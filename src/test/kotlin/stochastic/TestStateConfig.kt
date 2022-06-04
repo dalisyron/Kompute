@@ -1,10 +1,10 @@
 import com.google.common.truth.Truth.assertThat
 import core.StateManagerConfig
 import core.UserEquipmentStateManager
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import core.ue.UserEquipmentStateConfig
 
-class StateConfigTest {
+class TestStateConfig {
     private val sampleStateConfig1 = UserEquipmentStateConfig.singleQueue(
         taskQueueCapacity = 5,
         tuNumberOfPackets = 4,

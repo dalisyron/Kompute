@@ -7,7 +7,7 @@ import core.ue.OffloadingSystemConfig.Companion.withTaskQueueCapacity
 import core.ue.UserEquipmentComponentsConfig
 import core.ue.UserEquipmentConfig
 import core.ue.UserEquipmentStateConfig
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import org.junit.experimental.categories.Category
 import core.ue.OffloadingSystemConfig.Companion.withAlphaSingleQueue
 import core.ue.OffloadingSystemConfig.Companion.withEtaConfigSingleQueue

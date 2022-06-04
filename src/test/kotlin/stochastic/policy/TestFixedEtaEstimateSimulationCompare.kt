@@ -6,7 +6,7 @@ import core.ue.OffloadingSystemConfig.Companion.withEtaConfigSingleQueue
 import simulation.simulation.Simulator
 import stochastic.lp.RangedOptimalPolicyFinder
 
-class FixedEtaEstimateSimulationCompareTest(
+class TestFixedEtaEstimateSimulationCompare(
     private val etaStart: Double,
     private val etaEnd: Double,
     private val sampleCount: Int,

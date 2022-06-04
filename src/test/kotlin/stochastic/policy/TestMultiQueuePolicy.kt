@@ -4,12 +4,12 @@ import core.policy.GreedyOffloadFirstPolicy
 import core.policy.LocalOnlyPolicy
 import core.policy.TransmitOnlyPolicy
 import core.ue.OffloadingSystemConfig.Companion.withEtaConfig
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import simulation.app.Mock
 import simulation.simulation.Simulator
 import stochastic.lp.RangedOptimalPolicyFinder
 
-class MultiQueuePolicyTests {
+class TestMultiQueuePolicy {
 
     @Test
     fun compareSimulationWithEstimate() {

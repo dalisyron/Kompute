@@ -1,6 +1,6 @@
 package stochastic.lp
 
-class OffloadingLPCreatorTestsV2 {
+class TestOffloadingLPCreatorTests {
     /*
 
     fun getSimpleConfig(): OffloadingSystemConfig {

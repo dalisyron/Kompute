@@ -1,4 +1,4 @@
-package stochastic
+package stochastic.policy
 
 import com.google.common.truth.Truth.assertThat
 import core.policy.GreedyOffloadFirstPolicy
@@ -6,7 +6,7 @@ import core.environment.EnvironmentParameters
 import core.policy.GreedyLocalFirstPolicy
 import core.policy.LocalOnlyPolicy
 import core.policy.TransmitOnlyPolicy
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import simulation.simulation.Simulator
 import core.ue.OffloadingSystemConfig
 import core.ue.OffloadingSystemConfig.Companion.withAlphaSingleQueue
@@ -27,13 +27,8 @@ import org.junit.jupiter.api.Assertions
 import simulation.app.Mock
 import stochastic.lp.IneffectivePolicyException
 import stochastic.lp.RangedOptimalPolicyFinder
-import stochastic.policy.FixedEtaEstimateSimulationCompareTest
-import stochastic.policy.RangedAlphaStochasticPolicyTester
-import stochastic.policy.StochasticOffloadingPolicy
 
-interface SlowTests
-
-class StochasticPolicyTest {
+class TestStochasticPolicy {
 
     fun getSimpleConfig(): OffloadingSystemConfig {
         val environmentParameters = EnvironmentParameters.singleQueue(
@@ -89,7 +84,7 @@ class StochasticPolicyTest {
     fun testCompareSimulationWithLPForEta() {
         val baseConfig = getSimpleConfig().withTaskQueueCapacity(20)
 
-        val tester = FixedEtaEstimateSimulationCompareTest(
+        val tester = TestFixedEtaEstimateSimulationCompare(
             etaStart = 0.1,
             etaEnd = 0.28,
             sampleCount = 28,
@@ -113,7 +108,7 @@ class StochasticPolicyTest {
                 .withTaskQueueCapacity(100)
                 .withPMax(200.0)
 
-        val tester = FixedEtaEstimateSimulationCompareTest(
+        val tester = TestFixedEtaEstimateSimulationCompare(
             etaStart = 0.6,
             etaEnd = 0.6,
             sampleCount = 1,

@@ -9,12 +9,12 @@ import core.ue.UserEquipmentComponentsConfig
 import core.ue.UserEquipmentConfig
 import core.symbol.ParameterSymbol
 import core.symbol.Symbol
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import core.policy.Action
 import core.ue.UserEquipmentState
 import core.ue.UserEquipmentStateConfig
 
-class IndependentTransitionCalculatorTest {
+class TestIndependentTransitionSymbolsCalculator {
 
     fun getSimpleConfig(): OffloadingSystemConfig {
         val environmentParameters = EnvironmentParameters.singleQueue(

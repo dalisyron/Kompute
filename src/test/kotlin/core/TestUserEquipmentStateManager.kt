@@ -8,12 +8,11 @@ import core.symbol.Symbol
 import core.ue.OffloadingSystemConfig
 import core.ue.OffloadingSystemConfig.Companion.withUserEquipmentStateConfig
 import core.ue.UserEquipmentStateConfig
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import simulation.app.Mock
 import core.ue.UserEquipmentState
-import stochastic.dtmc.transition.Transition
 
-class UserEquipmentStateManagerTests {
+class TestUserEquipmentStateManager {
 
     fun getSystemConfig(userEquipmentStateConfig: UserEquipmentStateConfig): OffloadingSystemConfig {
         val systemConfig = Mock.configFromLiyu().withUserEquipmentStateConfig(
