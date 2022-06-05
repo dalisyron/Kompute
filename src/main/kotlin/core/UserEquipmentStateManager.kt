@@ -360,6 +360,18 @@ class UserEquipmentStateManager(private val config: StateManagerConfig) : Possib
             val badA = (it.isCPUActive() && config.limitation.all { it == StateManagerConfig.Limitation.OffloadOnly })
             val badB = (it.isTUActive() && config.limitation.all { it == StateManagerConfig.Limitation.LocalOnly })
             return@filterNot badA || badB
+        }.filter { state ->
+            if (state.isCPUActive()) {
+                val numberOfSections = config.userEquipmentStateConfig.cpuNumberOfSections[state.cpuTaskTypeQueueIndex]
+                return@filter state.cpuState < numberOfSections
+            }
+            true
+        }.filter { state ->
+            if (state.isTUActive()) {
+                val numberOfPackets = config.userEquipmentStateConfig.tuNumberOfPackets[state.tuTaskTypeQueueIndex]
+                return@filter state.tuState <= numberOfPackets
+            }
+            true
         }
         return possibleStates.sorted()
     }

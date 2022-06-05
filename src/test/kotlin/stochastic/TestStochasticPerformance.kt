@@ -1,5 +1,6 @@
 package stochastic
 
+import com.google.common.truth.Truth.assertThat
 import core.environment.EnvironmentParameters
 import core.ue.OffloadingSystemConfig
 import core.ue.OffloadingSystemConfig.Companion.withBeta
@@ -14,8 +15,10 @@ import core.ue.OffloadingSystemConfig.Companion.withEtaConfig
 import core.ue.OffloadingSystemConfig.Companion.withEtaConfigSingleQueue
 import core.ue.OffloadingSystemConfig.Companion.withNumberOfSectionsSingleQueue
 import simulation.app.Mock
+import stochastic.lp.EquationRow
 import stochastic.lp.OffloadingLPCreator
 import stochastic.lp.RangedOptimalPolicyFinder
+import kotlin.system.measureTimeMillis
 
 interface PerformanceTests
 
@@ -93,5 +96,30 @@ class StochasticPerformanceTests {
         val config = Mock.doubleConfigHeavyLight()
         val lp = OffloadingLPCreator(config.withEtaConfig(listOf(0.3, 0.1))).createOffloadingLinearProgram()
         // Runtime in L was 12528 ms
+    }
+
+    @Test
+    fun testCompareV2() {
+        val config = Mock.doubleQueueConfig1().withTaskQueueCapacity(7)
+        val equationList4: List<EquationRow>
+        val timeV1 = measureTimeMillis {
+            equationList4 = OffloadingLPCreator(config).getEquations4()
+        }
+        val equationList4V2: List<EquationRow>
+        val timeV2 = measureTimeMillis {
+            equationList4V2 = OffloadingLPCreator(config).getEquations4V2()
+        }
+
+        equationList4.forEachIndexed { i, equation ->
+            assertThat(equation.type)
+                .isEqualTo(equationList4V2[i].type)
+
+            equation.coefficients.forEachIndexed { index, d ->
+                assertThat(d)
+                    .isWithin(1e-4)
+                    .of(equationList4V2[i].coefficients[index])
+            }
+        }
+        println("$timeV1 ms | $timeV2 ms")
     }
 }

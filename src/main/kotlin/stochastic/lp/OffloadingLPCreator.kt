@@ -30,13 +30,15 @@ class OffloadingLPCreator(
     val systemConfig: OffloadingSystemConfig
 ) {
     private val userEquipmentStateManager = UserEquipmentStateManager(systemConfig.getStateManagerConfig())
+    private val symbolMapping: Map<Symbol, Double> = createSymbolMapping()
+    private val dtmcCreator: DTMCCreator = DTMCCreator(systemConfig.getStateManagerConfig(), symbolMapping)
+    private val allStates: List<UserEquipmentState> = userEquipmentStateManager.allStates()
 
-    private lateinit var allStates: List<UserEquipmentState>
-    private lateinit var indexMapping: IndexMapping
-    private lateinit var discreteTimeMarkovChain: DiscreteTimeMarkovChain
-
-    private val possibleActionsByState: MutableMap<UserEquipmentState, List<Action>> = mutableMapOf()
-    private val dtmcCreator: DTMCCreator = DTMCCreator(systemConfig.getStateManagerConfig(), createSymbolMapping())
+    private val possibleActionsByState: Map<UserEquipmentState, List<Action>> = populatePossibleActions()
+    private val indexMapping: IndexMapping = createIndexMapping()
+    private val discreteTimeMarkovChain: DiscreteTimeMarkovChain by lazy {
+        dtmcCreator.create()
+    }
 
     private fun createSymbolMapping(): Map<Symbol, Double> {
         val result: MutableMap<Symbol, Double> = mutableMapOf()
@@ -161,7 +163,8 @@ class OffloadingLPCreator(
         )
     }
 
-    private fun getEquations4(): MutableList<EquationRow> {
+    @Deprecated("Use V2")
+    fun getEquations4(): MutableList<EquationRow> {
         val equations: MutableList<EquationRow> = mutableListOf()
 
         for (destState in allStates) {
@@ -171,14 +174,73 @@ class OffloadingLPCreator(
         return equations
     }
 
+    private fun getIndependentTransitionFraction(
+        symbolList: List<Symbol>,
+        action: Action
+    ): Double {
+        var result = 0.0
+
+        var product = 1.0
+        var count = 0
+        for (symbol in symbolList) {
+            if (symbol != action) {
+                product *= symbolMapping[symbol]!!
+                count++
+            }
+        }
+        check(count == symbolList.size - 1)
+        result += product
+
+        return result
+    }
+
+    fun getEquations4V2(): MutableList<EquationRow> {
+        val equations: MutableList<EquationRow> = mutableListOf()
+        val stateToIndex = allStates.mapIndexed { index, userEquipmentState -> userEquipmentState to index }.toMap()
+        val coefficients = (1..allStates.size).map { mutableListOfZeros(indexMapping.variableCount) }
+
+        for (source in allStates) {
+            for (action in possibleActionsByState[source]!!) {
+                val transitions = userEquipmentStateManager.getTransitionsForAction(source, action)
+                for (transition in transitions) {
+                    val stateAction = StateAction(source, action)
+                    val coefficientIndex = indexMapping.coefficientIndexByStateAction[stateAction]!!
+                    val idx = stateToIndex[transition.dest]!!
+                    require(transition.transitionSymbols.size == 1)
+                    coefficients[idx][coefficientIndex] =
+                        getIndependentTransitionFraction(transition.transitionSymbols.first(), action)
+                }
+            }
+        }
+
+        indexMapping.coefficientIndexByStateAction.forEach { (stateAction, index) ->
+            coefficients[stateToIndex[stateAction.state]!!][index] -= 1.0
+        }
+
+        for (i in allStates.indices) {
+            equations.add(
+                EquationRow(
+                    coefficients = coefficients[i],
+                    rhs = 0.0,
+                    type = EquationRow.Type.Equality
+                )
+            )
+        }
+
+        return equations
+    }
+
+    @Deprecated("Use V2")
     private fun getEquation4(destState: UserEquipmentState): EquationRow {
         val rhsEquation4 = 0.0
         val coefficients = mutableListOf<Double>()
         for (i in 0 until indexMapping.variableCount) coefficients.add(0.0)
 
         for ((stateAction, index) in indexMapping.coefficientIndexByStateAction) {
+            val (sourceState, action) = stateAction
             val independentTransitionValue =
-                discreteTimeMarkovChain.transitionSymbolsByIndex[IndexStateStateAction(stateAction.state, destState, stateAction.action)]?:0.0
+                discreteTimeMarkovChain.transitionSymbolsByIndex[IndexStateStateAction(sourceState, destState, action)]
+                    ?: 0.0
 
             coefficients[index] = if (stateAction.state == destState) {
                 independentTransitionValue - 1
@@ -204,13 +266,15 @@ class OffloadingLPCreator(
         )
     }
 
-    private fun populatePossibleActions() {
-        check(possibleActionsByState.isEmpty())
+    private fun populatePossibleActions(): Map<UserEquipmentState, List<Action>> {
+        val result: MutableMap<UserEquipmentState, List<Action>> = mutableMapOf()
 
         for (state in allStates) {
             val actions = userEquipmentStateManager.getPossibleActions(state)
-            possibleActionsByState[state] = actions
+            result[state] = actions
         }
+
+        return result
     }
 
     fun equationMapping(equationRow: EquationRow): Map<StateAction, Double> {
@@ -219,17 +283,13 @@ class OffloadingLPCreator(
     }
 
     fun createOffloadingLinearProgram(): OffloadingLinearProgram {
-        allStates = userEquipmentStateManager.allStates()
-        indexMapping = createIndexMapping()
-        discreteTimeMarkovChain = dtmcCreator.create()
-        populatePossibleActions()
         val equations: MutableList<EquationRow> = mutableListOf()
 
         with(equations) {
             add(getObjectiveEquation())
             add(getEquation2())
             addAll(getEquations3())
-            addAll(getEquations4())
+            addAll(getEquations4V2())
             add(getEquation5())
             // addAll(getEquations6())
         }
@@ -250,8 +310,7 @@ class OffloadingLPCreator(
             if (!userEquipmentStateManager.isStatePossible(state)) {
                 continue
             }
-            val possibleActions = userEquipmentStateManager.getPossibleActions(state)
-            for (action in possibleActions) {
+            for (action in possibleActionsByState[state]!!) {
                 val stateAction = StateAction(state, action)
                 stateActionByCoefficientIndex[indexPtr] = stateAction
                 coefficientIndexByStateAction[stateAction] = indexPtr
@@ -268,11 +327,8 @@ class OffloadingLPCreator(
     }
 
     fun createOffloadingLinearProgramExcludingEquation4(): OffloadingLinearProgram {
-        allStates = userEquipmentStateManager.allStates()
-        indexMapping = createIndexMapping()
         // discreteTimeMarkovChain = dtmcCreator.create()
         // itCalculator = IndependentTransitionCalculator(symbolMapping, discreteTimeMarkovChain)
-        populatePossibleActions()
         val equations: MutableList<EquationRow?> = mutableListOf()
 
         with(equations) {

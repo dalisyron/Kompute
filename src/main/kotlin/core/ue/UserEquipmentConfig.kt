@@ -99,10 +99,12 @@ data class OffloadingSystemConfig(
 
         for (queueIndexA in 0 until userEquipmentConfig.numberOfQueues) {
             for (queueIndexB in 0 until userEquipmentConfig.numberOfQueues) {
-                result.add(Action.AddToBothUnits(
-                    transmissionUnitTaskQueueIndex = queueIndexA,
-                    cpuTaskQueueIndex = queueIndexB
-                ))
+                result.add(
+                    Action.AddToBothUnits(
+                        transmissionUnitTaskQueueIndex = queueIndexA,
+                        cpuTaskQueueIndex = queueIndexB
+                    )
+                )
             }
         }
 
@@ -150,7 +152,8 @@ data class OffloadingSystemConfig(
 
     fun stateCount(): Int {
         var product = 1
-        val dimensions = (1..numberOfQueues).map { taskQueueCapacity + 1 } + (tuNumberOfPackets + 1) + (cpuNumberOfSections) + (numberOfQueues + 1) + (numberOfQueues + 1)
+        val dimensions =
+            (1..numberOfQueues).map { taskQueueCapacity + 1 } + (tuNumberOfPackets + 1) + (cpuNumberOfSections) + (numberOfQueues + 1) + (numberOfQueues + 1)
 
         for (d in dimensions) {
             product *= d
@@ -162,7 +165,7 @@ data class OffloadingSystemConfig(
 
     fun getLimitation(): List<StateManagerConfig.Limitation> {
         if (userEquipmentConfig.eta == null) {
-            return listOf(StateManagerConfig.Limitation.None)
+            return (1..numberOfQueues).map { StateManagerConfig.Limitation.None }
         }
         return userEquipmentConfig.eta.map { eta ->
             if (eta == 1.0) {
