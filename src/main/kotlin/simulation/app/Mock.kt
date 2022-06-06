@@ -130,7 +130,7 @@ object Mock {
                     etaConfig = null,
                     pTx = 1.0,
                     pLocal = 0.8,
-                    pMax = 1.7
+                    pMax = 1.5
                 )
             ),
             environmentParameters = EnvironmentParameters(

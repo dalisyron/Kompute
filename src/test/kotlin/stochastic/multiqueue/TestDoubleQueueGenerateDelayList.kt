@@ -21,4 +21,18 @@ class TestDoubleQueueGenerateDelayList {
         val result = tester.runConcurrent(24)
         println(result)
     }
+
+    @Test
+    fun testHeavyLightTemp() {
+        val config = Mock.doubleConfigHeavyLight().withTaskQueueCapacity(8)
+        val tester = DelayListTester(
+            baseSystemConfig = config,
+            alphaRanges = listOf(AlphaRange.Variable(0.01, 0.48, 2), AlphaRange.Variable(0.01, 0.48, 2)),
+            precision = 30,
+            simulationTicks = 4_000_000
+        )
+
+        val result = tester.runConcurrent(24)
+        println(result)
+    }
 }
