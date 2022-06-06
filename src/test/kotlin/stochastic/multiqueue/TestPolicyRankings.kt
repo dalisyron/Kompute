@@ -20,7 +20,8 @@ class TestPolicyRankings {
             alphaRanges = listOf(AlphaRange.Constant(0.2), AlphaRange.Variable(0.01, 0.3, 10)),
             precision = 4,
             simulationTicks = 1_000_000,
-            assertionsEnabled = true
+            assertionsEnabled = true,
+            numberOfThreads = 24
         )
 
         val resultsSingleThread: PolicyRankingTester.DelayAverageRankingResult
@@ -29,7 +30,7 @@ class TestPolicyRankings {
         }
         val resultsConcurrent: PolicyRankingTester.DelayAverageRankingResult
         val millisConcurrent = measureTimeMillis {
-            resultsConcurrent = tester.runConcurrent(4)
+            resultsConcurrent = tester.run()
         }
 
         resultsSingleThread.stochasticRankingPercents.forEachIndexed { idx, percent ->
@@ -51,10 +52,11 @@ class TestPolicyRankings {
             alphaRanges = listOf(AlphaRange.Constant(0.2), AlphaRange.Variable(0.01, 0.3, 10)),
             precision = 5,
             simulationTicks = 2_000_000,
-            assertionsEnabled = true
+            assertionsEnabled = true,
+            numberOfThreads = 24
         )
 
-        val result = tester.runConcurrent(12)
+        val result = tester.run()
 
         println(result)
         // DelayAverageRankingResult(localOnlyRankingPercents=[0.0, 0.0, 0.0, 0.0, 100.0], offloadOnlyRankingPercents=[0.0, 10.0, 30.0, 60.0, 0.0], greedyOffloadFirstRankingPercents=[0.0, 60.0, 40.0, 0.0, 0.0], greedyLocalFirstRankingPercents=[0.0, 30.0, 30.0, 40.0, 0.0], stochasticRankingPercents=[100.0, 0.0, 0.0, 0.0, 0.0])
@@ -63,5 +65,22 @@ class TestPolicyRankings {
 
     @Test
     fun testTripleQueue() {
+        val config = Mock.tripleConfigHeavyLightMid()
+        val alphaRanges = listOf<AlphaRange>(
+            AlphaRange.Variable(0.01, 0.30, 5),
+            AlphaRange.Variable(0.01, 0.30, 5),
+            AlphaRange.Variable(0.01, 0.30, 5)
+        )
+
+        val tester = PolicyRankingTester(
+            baseSystemConfig = config,
+            alphaRanges = alphaRanges,
+            precision = 25,
+            simulationTicks = 4_000_000,
+            assertionsEnabled = false,
+            numberOfThreads = 24
+        )
+
+        val results = tester.run()
     }
 }

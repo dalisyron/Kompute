@@ -18,7 +18,8 @@ class TestDoubleQueueDelayRanking {
             alphaRanges = listOf(AlphaRange.Constant(0.2), AlphaRange.Variable(0.01, 0.3, 10)),
             precision = 4,
             simulationTicks = 1_000_000,
-            assertionsEnabled = true
+            assertionsEnabled = true,
+            numberOfThreads = 24
         )
 
         val resultsSingleThread: PolicyRankingTester.DelayAverageRankingResult
@@ -28,7 +29,7 @@ class TestDoubleQueueDelayRanking {
 
         val resultsConcurrent: PolicyRankingTester.DelayAverageRankingResult
         val millisConcurrent = measureTimeMillis {
-            resultsConcurrent = tester.runConcurrent(4)
+            resultsConcurrent = tester.run()
         }
 
         resultsSingleThread.stochasticRankingPercents.forEachIndexed { index, d ->
@@ -63,7 +64,8 @@ class TestDoubleQueueDelayRanking {
             alphaRanges = listOf(AlphaRange.Constant(0.2), AlphaRange.Variable(0.01, 0.3, 20)),
             precision = 10,
             simulationTicks = 2_000_000,
-            assertionsEnabled = true
+            assertionsEnabled = true,
+            numberOfThreads = 24
         )
 
         val result = tester.run()

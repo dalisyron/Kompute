@@ -1,13 +1,13 @@
 package tester
 
-import com.google.common.truth.Truth
 import com.google.common.truth.Truth.assertThat
 import core.*
 import core.policy.*
 import core.ue.OffloadingSystemConfig
 import core.ue.OffloadingSystemConfig.Companion.withAlpha
 import simulation.simulation.Simulator
-import stochastic.lp.RangedOptimalPolicyFinder
+import stochastic.lp.ConcurrentRangedOptimalPolicyFinder
+import stochastic.policy.StochasticOffloadingPolicy
 import kotlin.concurrent.thread
 
 class PolicyRankingTester(
@@ -15,13 +15,20 @@ class PolicyRankingTester(
     private val alphaRanges: List<AlphaRange>,
     private val precision: Int,
     private val simulationTicks: Int,
-    private val assertionsEnabled: Boolean
+    private val assertionsEnabled: Boolean,
+    private val numberOfThreads: Int
 ) {
-    private var localOnlyRankingCount: MutableList<Int> = mutableListOfInt(5, 0)
-    private var offloadOnlyRankingCount: MutableList<Int> = mutableListOfInt(5, 0)
-    private var greedyOffloadFirstRankingCount: MutableList<Int> = mutableListOfInt(5, 0)
-    private var greedyLocalFirstRankingCount: MutableList<Int> = mutableListOfInt(5, 0)
-    private var stochasticRankingCount: MutableList<Int> = mutableListOfInt(5, 0)
+
+    data class DelayCountState(
+        val localOnlyRankingCount: MutableList<Int> = mutableListOfInt(5, 0),
+        val offloadOnlyRankingCount: MutableList<Int> = mutableListOfInt(5, 0),
+        val greedyOffloadFirstRankingCount: MutableList<Int> = mutableListOfInt(5, 0),
+        val greedyLocalFirstRankingCount: MutableList<Int> = mutableListOfInt(5, 0),
+        val stochasticRankingCount: MutableList<Int> = mutableListOfInt(5, 0),
+    )
+
+    private val alphaCombinations: List<List<Double>> = cartesianProduct(alphaRanges.map { it.toList() })
+    private lateinit var stochasticPolicies: List<StochasticOffloadingPolicy>
 
     init {
         require(alphaRanges.isNotEmpty())
@@ -35,91 +42,60 @@ class PolicyRankingTester(
         val stochasticRank: Int,
     )
 
-    var alphaCount: Int? = null
-
     fun run(): DelayAverageRankingResult {
-        reset()
-        val alphaCombinations: List<List<Double>> = cartesianProduct(alphaRanges.map { it.toList() })
-        alphaCount = alphaCombinations.size
+        val countState = DelayCountState()
 
-        val localOnlyRankingCount: MutableList<Int> = mutableListOfInt(5, 0)
-        val offloadOnlyRankingCount: MutableList<Int> = mutableListOfInt(5, 0)
-        val greedyOffloadFirstRankingCount: MutableList<Int> = mutableListOfInt(5, 0)
-        val greedyLocalFirstRankingCount: MutableList<Int> = mutableListOfInt(5, 0)
-        val stochasticRankingCount: MutableList<Int> = mutableListOfInt(5, 0)
+        val threadCount = Integer.min(numberOfThreads, alphaCombinations.size)
+        val alphaBatches = alphaCombinations.splitEqual(threadCount)
+        val batchSizes = alphaBatches.map { it.size }.toCumulative()
 
-        alphaCombinations.forEachIndexed { index, alpha: List<Double> ->
-            val delayResult: DelayAverageRankingItem = getDelaysForAlpha(alpha)
+        stochasticPolicies = alphaCombinations.map {
+            ConcurrentRangedOptimalPolicyFinder(baseSystemConfig.withAlpha(it)).findOptimalPolicy(
+                precision,
+                numberOfThreads
+            )
+        }
 
-            localOnlyRankingCount[delayResult.localOnlyRank]++
-            offloadOnlyRankingCount[delayResult.offloadOnlyRank]++
-            greedyOffloadFirstRankingCount[delayResult.greedyOffloadFirstDelay]++
-            greedyLocalFirstRankingCount[delayResult.greedyLocalFirstRank]++
-            stochasticRankingCount[delayResult.stochasticRank]++
+        val threads = (0 until threadCount).map { i ->
+            thread(start = false) {
+                for (index in alphaBatches[i].indices) {
+                    val alphaIndex = (if (i == 0) 0 else batchSizes[i - 1]) + index
+                    val delayResult: DelayAverageRankingItem = getDelaysForAlpha(alphaIndex)
 
-            if (assertionsEnabled) {
-                validateAlphaDelayResult(delayResult)
+                    if (assertionsEnabled) {
+                        validateAlphaDelayResult(delayResult)
+                    }
+                    updateRankingCounts(countState, delayResult)
+                }
+
             }
         }
 
+        threads.forEach { it.start() }
+        threads.forEach { it.join() }
+
         return DelayAverageRankingResult(
-            localOnlyRankingPercents = toPercent(localOnlyRankingCount),
-            offloadOnlyRankingPercents = toPercent(offloadOnlyRankingCount),
-            greedyOffloadFirstRankingPercents = toPercent(greedyOffloadFirstRankingCount),
-            greedyLocalFirstRankingPercents = toPercent(greedyLocalFirstRankingCount),
-            stochasticRankingPercents = toPercent(stochasticRankingCount)
+            localOnlyRankingPercents = toPercent(countState.localOnlyRankingCount),
+            offloadOnlyRankingPercents = toPercent(countState.offloadOnlyRankingCount),
+            greedyOffloadFirstRankingPercents = toPercent(countState.greedyOffloadFirstRankingCount),
+            greedyLocalFirstRankingPercents = toPercent(countState.greedyLocalFirstRankingCount),
+            stochasticRankingPercents = toPercent(countState.stochasticRankingCount)
         )
     }
 
     private fun toPercent(rankCounts: List<Int>): List<Double> {
-        return rankCounts.map { (it.toDouble() / alphaCount!!.toDouble()) * 100.0 }
-    }
-
-    fun runConcurrent(numberOfThreads: Int): DelayAverageRankingResult {
-        reset()
-        val alphaCombinations: List<List<Double>> = cartesianProduct(alphaRanges.map { it.toList() })
-        alphaCount = alphaCombinations.size
-
-        val threadCount = Integer.min(Integer.min(numberOfThreads, 12), alphaCombinations.size)
-        val alphaBatches = alphaCombinations.splitEqual(threadCount)
-
-        val threads = (0 until threadCount).map {
-            thread(start = false) {
-                for (alpha in alphaBatches[it]) {
-                    val rankingItem: DelayAverageRankingItem = getDelaysForAlpha(alpha)
-
-                    updateRankingCounts(rankingItem)
-                    if (assertionsEnabled) {
-                        validateAlphaDelayResult(rankingItem)
-                    }
-                }
-            }
-        }
-
-        threads.forEach {
-            it.start()
-        }
-
-        threads.forEach {
-            it.join()
-        }
-
-        return DelayAverageRankingResult(
-            localOnlyRankingPercents = toPercent(localOnlyRankingCount),
-            offloadOnlyRankingPercents = toPercent(offloadOnlyRankingCount),
-            greedyOffloadFirstRankingPercents = toPercent(greedyOffloadFirstRankingCount),
-            greedyLocalFirstRankingPercents = toPercent(greedyLocalFirstRankingCount),
-            stochasticRankingPercents = toPercent(stochasticRankingCount)
-        )
+        return rankCounts.map { (it.toDouble() / alphaCombinations.size.toDouble()) * 100.0 }
     }
 
     @Synchronized
-    fun updateRankingCounts(rankingItem: DelayAverageRankingItem) {
-        localOnlyRankingCount[rankingItem.localOnlyRank]++
-        offloadOnlyRankingCount[rankingItem.offloadOnlyRank]++
-        greedyOffloadFirstRankingCount[rankingItem.greedyOffloadFirstDelay]++
-        greedyLocalFirstRankingCount[rankingItem.greedyLocalFirstRank]++
-        stochasticRankingCount[rankingItem.stochasticRank]++
+    fun updateRankingCounts(countState: DelayCountState, rankingItem: DelayAverageRankingItem) {
+        with(countState) {
+            localOnlyRankingCount[rankingItem.localOnlyRank]++
+            offloadOnlyRankingCount[rankingItem.offloadOnlyRank]++
+            greedyOffloadFirstRankingCount[rankingItem.greedyOffloadFirstDelay]++
+            greedyLocalFirstRankingCount[rankingItem.greedyLocalFirstRank]++
+            stochasticRankingCount[rankingItem.stochasticRank]++
+        }
     }
 
     private fun validateAlphaDelayResult(delayItem: DelayAverageRankingItem) {
@@ -127,10 +103,10 @@ class PolicyRankingTester(
             .isEqualTo(0)
     }
 
-    private fun getDelaysForAlpha(alpha: List<Double>): DelayAverageRankingItem {
+    private fun getDelaysForAlpha(alphaIndex: Int): DelayAverageRankingItem {
+        val alpha = alphaCombinations[alphaIndex]
         val config = baseSystemConfig.withAlpha(alpha)
         val simulator = Simulator(config)
-        val stochastic = RangedOptimalPolicyFinder.findOptimalPolicy(config, precision)
         println("Running simulations for alpha = $alpha")
 
         val localOnlyDelay = simulator.simulatePolicy(LocalOnlyPolicy, simulationTicks).averageDelay
@@ -139,7 +115,7 @@ class PolicyRankingTester(
             simulator.simulatePolicy(GreedyOffloadFirstPolicy, simulationTicks).averageDelay
         val greedyLocalFirstDelay =
             simulator.simulatePolicy(GreedyLocalFirstPolicy, simulationTicks).averageDelay
-        val stochasticDelay = simulator.simulatePolicy(stochastic, simulationTicks).averageDelay
+        val stochasticDelay = simulator.simulatePolicy(stochasticPolicies[alphaIndex], simulationTicks).averageDelay
 
         val items =
             listOf(localOnlyDelay, offloadOnlyDelay, greedyLocalFirstDelay, greedyOffloadFirstDelay, stochasticDelay)
@@ -162,12 +138,4 @@ class PolicyRankingTester(
         val greedyLocalFirstRankingPercents: List<Double>,
         val stochasticRankingPercents: List<Double>
     )
-
-    fun reset() {
-        localOnlyRankingCount = mutableListOfInt(5, 0)
-        offloadOnlyRankingCount = mutableListOfInt(5, 0)
-        greedyOffloadFirstRankingCount = mutableListOfInt(5, 0)
-        greedyLocalFirstRankingCount = mutableListOfInt(5, 0)
-        stochasticRankingCount = mutableListOfInt(5, 0)
-    }
 }
