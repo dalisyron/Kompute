@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalTime::class)
+
 package stochastic.lp
 
 import core.EtaGenerator
@@ -10,8 +12,11 @@ import core.splitEqual
 import core.toCumulative
 import core.ue.UserEquipmentState
 import java.lang.Integer.min
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import kotlin.system.measureTimeMillis
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTimedValue
 
 class ConcurrentRangedOptimalPolicyFinder(
     private val baseSystemConfig: OffloadingSystemConfig,
@@ -22,31 +27,56 @@ class ConcurrentRangedOptimalPolicyFinder(
 
     private var optimalPolicy: StochasticOffloadingPolicy? = null
 
+    fun getEtaBatches(numberOfThreads: Int, etaConfigs: List<List<Double>>): List<List<List<Double>>> {
+        val batchSizes = etaConfigs.splitEqual(min(numberOfThreads, etaConfigs.size)).map { it.size }
+
+        val etaConfigsShuffled = etaConfigs.shuffled().toList()
+        val batchSizeCumulative = batchSizes.toCumulative()
+
+        val etaBatches: MutableList<List<List<Double>>> = mutableListOf()
+
+        batchSizes.forEachIndexed { index, size ->
+            val prev = if (index == 0) 0 else batchSizeCumulative[index - 1]
+            etaBatches.add(etaConfigsShuffled.subList(prev, prev + size))
+        }
+
+        require(etaBatches.map { it.size }.sum() == etaConfigs.size)
+
+        return etaBatches
+    }
+
     fun findOptimalPolicy(
         precision: Int,
         numberOfThreads: Int
     ): StochasticOffloadingPolicy {
-        val etaConfigs = EtaGenerator.generate(baseSystemConfig.numberOfQueues, precision)
+        val etaConfigs: List<List<Double>> = EtaGenerator.generate(baseSystemConfig.numberOfQueues, precision)
 
         val equation4RowsCacheByEtaType = createEquation4Cache(etaConfigs)
 
-        val etaBatches = etaConfigs.splitEqual(min(numberOfThreads, etaConfigs.size))
+        val etaBatches: List<List<List<Double>>> = getEtaBatches(numberOfThreads, etaConfigs)
         val batchSizeCumulative = etaBatches.map { it.size }.toCumulative()
+
+        val counter = AtomicInteger(0)
 
         val threads = (etaBatches.indices).map {
             thread(start = false) {
                 for ((idx, etaConfig) in etaBatches[it].withIndex()) {
                     val cycleIndex = (if (it == 0) 0 else batchSizeCumulative[it - 1]) + idx
-                    println("cycle $cycleIndex of ${etaConfigs.size} | etaConfig = $etaConfig | alpha = ${baseSystemConfig.alpha}")
+                    println("cycle = $cycleIndex of ${etaConfigs.size} | etaConfig = $etaConfig | alpha = ${baseSystemConfig.alpha} | finishedCount = ${counter.get()}")
                     val systemConfigWithEtas = baseSystemConfig.withEtaConfig(etaConfig)
                     try {
-                        val optimalPolicyWithGivenEta = RangedOptimalPolicyFinder.findOptimalPolicyWithGivenEta(
-                            systemConfigWithEtas,
-                            equation4RowsCacheByEtaType
-                        )
+                        val (optimalPolicyWithGivenEta, solveTime) = measureTimedValue {
+                             RangedOptimalPolicyFinder.findOptimalPolicyWithGivenEta(
+                                systemConfigWithEtas,
+                                equation4RowsCacheByEtaType
+                            )
+                        }
 
+                        println("Solved cycle $cycleIndex in $solveTime ms")
+                        counter.incrementAndGet()
                         updateOptimalPolicyResult(optimalPolicyWithGivenEta)
                     } catch (e: IneffectivePolicyException) {
+                        counter.incrementAndGet()
                         continue
                     }
                 }
@@ -109,8 +139,11 @@ object RangedOptimalPolicyFinder {
             println("cycle $i of ${etaConfigs.size} | etaConfig = $etaConfig | alpha = ${baseSystemConfig.alpha}")
             i++
             try {
-                val optimalPolicyWithGivenEta =
-                    findOptimalPolicyWithGivenEta(systemConfigWithEtas, equation4RowsCacheByEtaType)
+                val optimalPolicyWithGivenEta: StochasticOffloadingPolicy
+                val solveTime = measureTimeMillis {
+                     optimalPolicyWithGivenEta = findOptimalPolicyWithGivenEta(systemConfigWithEtas, equation4RowsCacheByEtaType)
+                }
+                println("solveTime for cycle ${i - 1} = $solveTime ms")
 
                 if (optimalPolicy == null || optimalPolicyWithGivenEta.averageDelay < optimalPolicy.averageDelay) {
                     optimalPolicy = optimalPolicyWithGivenEta
@@ -169,31 +202,24 @@ class OffloadingSolver(
         val offloadingLPCreator = OffloadingLPCreator(systemConfig)
         lateinit var standardLinearProgram: StandardLinearProgram
         lateinit var offloadingLP: OffloadingLinearProgram
+        val etaType: OffloadingEtaType = OffloadingEtaType.fromEtaConfig(systemConfig.eta!!)
+        val equation4Cache = equation4CacheByEtaType?.get(etaType)
 
-        val creationTime: Long = measureTimeMillis {
-            val etaType: OffloadingEtaType = OffloadingEtaType.fromEtaConfig(systemConfig.eta!!)
-            val equation4Cache = equation4CacheByEtaType?.get(etaType)
-
-            requireNotNull(equation4Cache)
-            offloadingLP = offloadingLPCreator.createOffloadingLinearProgramExcludingEquation4()
-            val rows = offloadingLP.standardLinearProgram.rows.toMutableList()
-            for (i in allStates.indices) {
-                check(rows[2 + systemConfig.numberOfQueues + i] == null)
-                rows[2 + systemConfig.numberOfQueues + i] = equation4Cache[i]
-            }
-            standardLinearProgram = StandardLinearProgram(rows)
+        requireNotNull(equation4Cache)
+        offloadingLP = offloadingLPCreator.createOffloadingLinearProgramExcludingEquation4()
+        val rows = offloadingLP.standardLinearProgram.rows.toMutableList()
+        for (i in allStates.indices) {
+            check(rows[2 + systemConfig.numberOfQueues + i] == null)
+            rows[2 + systemConfig.numberOfQueues + i] = equation4Cache[i]
         }
+        standardLinearProgram = StandardLinearProgram(rows)
 
-        println("Creation Time : $creationTime ms")
         val indexMapping = offloadingLP.indexMapping
         lateinit var solution: LPSolution
-        val solveTime = measureTimeMillis {
-            solution = LPSolver.solve(standardLinearProgram)
-        }
+        solution = LPSolver.solve(standardLinearProgram)
         if (solution.isAbnormal) {
             throw IneffectivePolicyException("")
         }
-        println("Solve Time: $solveTime ms")
         // println("solution = $solution")
 
         val policyConfig = createPolicyConfig(solution, indexMapping)

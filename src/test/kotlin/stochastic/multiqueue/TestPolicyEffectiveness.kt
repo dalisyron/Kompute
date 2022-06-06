@@ -49,4 +49,19 @@ class TestPolicyEffectiveness {
         val policy = ConcurrentRangedOptimalPolicyFinder(config).findOptimalPolicy(30, 32)
         println(policy)
     }
+
+    @Test
+    fun testPolicyEffectivenessHeavyLight4() {
+        val config = Mock.doubleConfigHeavyLight().withTaskQueueCapacity(10)
+
+        val policyEffectivenessTester = PolicyEffectivenessTester(
+            baseSystemConfig = config,
+            alphaRanges = listOf(AlphaRange.Variable(0.01, 0.50, 10), AlphaRange.Variable(0.01, 0.50, 10)),
+            precision = 30,
+            simulationTicks = 4_000_000
+        )
+
+        val result = policyEffectivenessTester.runConcurrent(12)
+        println(result)
+    }
 }
