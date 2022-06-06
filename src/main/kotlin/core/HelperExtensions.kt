@@ -1,5 +1,7 @@
 package core
 
+import com.github.sh0nk.matplotlib4j.Plot
+import java.io.File
 import java.lang.Integer.max
 import java.lang.Integer.min
 import kotlin.random.Random
@@ -220,4 +222,9 @@ fun List<Int>.toCumulative(): List<Int> {
 
 fun Boolean.toInt(): Int {
     return if (this) 1 else 0
+}
+
+fun writeToFile(plt: Plot) {
+    plt.savefig("figure.png")
+    plt.executeSilently()
 }

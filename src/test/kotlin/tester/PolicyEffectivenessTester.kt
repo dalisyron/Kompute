@@ -5,6 +5,7 @@ import core.policy.*
 import core.ue.OffloadingSystemConfig
 import core.ue.OffloadingSystemConfig.Companion.withAlpha
 import simulation.simulation.Simulator
+import stochastic.lp.ConcurrentRangedOptimalPolicyFinder
 import stochastic.lp.NoEffectivePolicyFoundException
 import stochastic.lp.RangedOptimalPolicyFinder
 import java.lang.Integer.min
@@ -81,9 +82,15 @@ class PolicyEffectivenessTester(
         val greedyOffloadFirstIsEffective: MutableList<Int> = mutableListOfInt(alphaCombinations.size, -1)
         val greedyLocalFirstIsEffective: MutableList<Int> = mutableListOfInt(alphaCombinations.size, -1)
 
-        val threadCount = min(min(numberOfThreads, 8), alphaCombinations.size)
+        val threadCount = min(numberOfThreads, alphaCombinations.size)
         val alphaBatches = alphaCombinations.splitEqual(threadCount)
         val batchSizeAccumulative = alphaBatches.map { it.size }.toCumulative()
+
+        val stochasticPolicies = alphaCombinations.map {
+            runCatching {
+                ConcurrentRangedOptimalPolicyFinder(baseSystemConfig.withAlpha(it)).findOptimalPolicy(precision, numberOfThreads)
+            }
+        }
 
         val threads = (0 until threadCount).map { i ->
             thread(start = false) {
@@ -91,18 +98,16 @@ class PolicyEffectivenessTester(
                     val alphaConfig = baseSystemConfig.withAlpha(alpha)
                     val simulator = Simulator(alphaConfig)
                     val alphaIndex = (if (i > 0) batchSizeAccumulative[i - 1] else 0) + index
-
-                    try {
-                        val stochasticPolicy = RangedOptimalPolicyFinder.findOptimalPolicy(alphaConfig, precision)
-                        val simulationReportStochastic = simulator.simulatePolicy(stochasticPolicy, simulationTicks)
+                    val stochasticPolicy = stochasticPolicies[alphaIndex]
+                    if (stochasticPolicy.isFailure) {
+                        stochasticIsEffective[alphaIndex] = 0
+                    } else {
+                        val simulationReportStochastic = simulator.simulatePolicy(stochasticPolicy.getOrThrow(), simulationTicks)
                         if (simulationReportStochastic.isEffective) {
                             stochasticIsEffective[alphaIndex] = 1
                         } else {
                             stochasticIsEffective[alphaIndex] = 0
                         }
-
-                    } catch (_: NoEffectivePolicyFoundException) {
-                        stochasticIsEffective[alphaIndex] = 0
                     }
 
                     val simulationReportLocalOnly = simulator.simulatePolicy(LocalOnlyPolicy, simulationTicks)

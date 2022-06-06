@@ -72,7 +72,7 @@ class PolicyRankingTester(
     }
 
     private fun toPercent(rankCounts: List<Int>): List<Double> {
-        return rankCounts.map { (it.toDouble() / alphaCount!!) * 100.0 }
+        return rankCounts.map { (it.toDouble() / alphaCount!!.toDouble()) * 100.0 }
     }
 
     fun runConcurrent(numberOfThreads: Int): DelayAverageRankingResult {
