@@ -22,6 +22,7 @@ object LPSolver {
     }
 
     fun solve(lp: StandardLinearProgram, retryCounter: Int = 0): LPSolution {
+        println("Start solve")
         val rows = lp.rows.requireNoNulls()
         check(rows.map { it.coefficients.size }
             .toSet().size == 1) {
@@ -42,17 +43,17 @@ object LPSolver {
 
         val variableCount = rows[0].coefficients.size
 
-        val solver = MPSolver.createSolver("GLOP")
+        val solver = MPSolver.createSolver("SCIP")
 
         if (retryCounter == 1) {
-            solver.setSolverSpecificParametersAsString(
-                GlopParameters.newBuilder().setUsePreprocessing(false).build().toString()
-            )
+//            solver.setSolverSpecificParametersAsString(
+//                GlopParameters.newBuilder().setUsePreprocessing(false).build().toString()
+//            )
         } else if (retryCounter == 2) {
-            println("Changing tolerance to 1e-4")
-            solver.setSolverSpecificParametersAsString(
-                GlopParameters.newBuilder().setSolutionFeasibilityTolerance(1e-4).build().toString()
-            )
+//            println("Changing tolerance to 1e-4")
+//            solver.setSolverSpecificParametersAsString(
+//                GlopParameters.newBuilder().setSolutionFeasibilityTolerance(1e-4).build().toString()
+//            )
         }
 
         checkNotNull(solver) {
@@ -96,6 +97,7 @@ object LPSolver {
 
         val resultStatus = solver.solve()
 
+        println("end solve")
         if (resultStatus != MPSolver.ResultStatus.OPTIMAL) {
             if (retryCounter <= 1) {
                 return solve(lp, retryCounter + 1)

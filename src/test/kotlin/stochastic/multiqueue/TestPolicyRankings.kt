@@ -67,20 +67,21 @@ class TestPolicyRankings {
     fun testTripleQueue() {
         val config = Mock.tripleConfigHeavyLightMid()
         val alphaRanges = listOf<AlphaRange>(
-            AlphaRange.Variable(0.01, 0.30, 5),
-            AlphaRange.Variable(0.01, 0.30, 5),
-            AlphaRange.Variable(0.01, 0.30, 5)
+            AlphaRange.Variable(0.40, 0.40, 5),
+            AlphaRange.Variable(0.44, 0.44, 5),
+            AlphaRange.Variable(0.45, 0.45, 5)
         )
 
         val tester = PolicyRankingTester(
             baseSystemConfig = config,
             alphaRanges = alphaRanges,
-            precision = 25,
+            precision = 50,
             simulationTicks = 4_000_000,
             assertionsEnabled = false,
             numberOfThreads = 24
         )
 
         val results = tester.run()
+        println(results)
     }
 }
