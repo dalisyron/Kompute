@@ -3,7 +3,6 @@ package stochastic.lp
 import com.google.ortools.Loader
 import com.google.ortools.glop.GlopParameters
 import com.google.ortools.linearsolver.MPConstraint
-import com.google.ortools.linearsolver.MPModelExportOptions
 import com.google.ortools.linearsolver.MPSolver
 
 fun MPSolver.makeEqualityConstraint(rhs: Double, name: String): MPConstraint {
@@ -16,7 +15,7 @@ data class LPSolution(
     val isAbnormal: Boolean
 )
 
-object LPSolver {
+object GLOPSolver {
 
     init {
         Loader.loadNativeLibraries()

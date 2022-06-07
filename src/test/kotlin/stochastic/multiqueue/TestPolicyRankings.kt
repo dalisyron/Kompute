@@ -67,9 +67,9 @@ class TestPolicyRankings {
     fun testTripleQueue() {
         val config = Mock.tripleConfigHeavyLightMid()
         val alphaRanges = listOf<AlphaRange>(
-            AlphaRange.Variable(0.40, 0.40, 5),
-            AlphaRange.Variable(0.44, 0.44, 5),
-            AlphaRange.Variable(0.45, 0.45, 5)
+            AlphaRange.Variable(0.40, 0.40, 1),
+            AlphaRange.Variable(0.42, 0.42, 1),
+            AlphaRange.Variable(0.45, 0.45, 1)
         )
 
         val tester = PolicyRankingTester(
