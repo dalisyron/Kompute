@@ -75,7 +75,7 @@ class TestPolicyRankings {
         val tester = PolicyRankingTester(
             baseSystemConfig = config,
             alphaRanges = alphaRanges,
-            precision = 50,
+            precision = 30,
             simulationTicks = 4_000_000,
             assertionsEnabled = false,
             numberOfThreads = 24

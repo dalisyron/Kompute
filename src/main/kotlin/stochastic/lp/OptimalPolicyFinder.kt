@@ -216,7 +216,7 @@ class OffloadingSolver(
 
         val indexMapping = offloadingLP.indexMapping
         lateinit var solution: LPSolution
-        solution = LPSolver.solve(standardLinearProgram)
+        solution = CPLEXSolver.solve(standardLinearProgram)
         if (solution.isAbnormal) {
             throw IneffectivePolicyException("")
         }

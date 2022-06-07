@@ -3,6 +3,7 @@ package stochastic.lp
 import com.google.ortools.Loader
 import com.google.ortools.glop.GlopParameters
 import com.google.ortools.linearsolver.MPConstraint
+import com.google.ortools.linearsolver.MPModelExportOptions
 import com.google.ortools.linearsolver.MPSolver
 
 fun MPSolver.makeEqualityConstraint(rhs: Double, name: String): MPConstraint {
@@ -43,17 +44,17 @@ object LPSolver {
 
         val variableCount = rows[0].coefficients.size
 
-        val solver = MPSolver.createSolver("SCIP")
+        val solver = MPSolver.createSolver("GLOP")
 
         if (retryCounter == 1) {
-//            solver.setSolverSpecificParametersAsString(
-//                GlopParameters.newBuilder().setUsePreprocessing(false).build().toString()
-//            )
+            solver.setSolverSpecificParametersAsString(
+                GlopParameters.newBuilder().setUsePreprocessing(false).build().toString()
+            )
         } else if (retryCounter == 2) {
-//            println("Changing tolerance to 1e-4")
-//            solver.setSolverSpecificParametersAsString(
-//                GlopParameters.newBuilder().setSolutionFeasibilityTolerance(1e-4).build().toString()
-//            )
+            println("Changing tolerance to 1e-4")
+            solver.setSolverSpecificParametersAsString(
+                GlopParameters.newBuilder().setSolutionFeasibilityTolerance(1e-4).build().toString()
+            )
         }
 
         checkNotNull(solver) {
@@ -61,7 +62,6 @@ object LPSolver {
         }
 
         val infinity = Double.POSITIVE_INFINITY
-
         val variables = (1..variableCount).map { index ->
             solver.makeNumVar(0.0, infinity, "x$index")
         }
