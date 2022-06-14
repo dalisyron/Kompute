@@ -64,4 +64,19 @@ class TestPolicyEffectiveness {
         val result = policyEffectivenessTester.runConcurrent(12)
         println(result)
     }
+
+    @Test
+    fun testTripleQueue() {
+        val config = Mock.tripleConfigHeavyLightMid().withTaskQueueCapacity(5)
+
+        val policyEffectivenessTester = PolicyEffectivenessTester(
+            baseSystemConfig = config,
+            alphaRanges = listOf(AlphaRange.Constant(0.10), AlphaRange.Variable(0.01, 0.50, 2), AlphaRange.Constant(0.2)),
+            precision = 10,
+            simulationTicks = 4_000_000
+        )
+
+        val result = policyEffectivenessTester.runConcurrent(2)
+        println(result)
+    }
 }

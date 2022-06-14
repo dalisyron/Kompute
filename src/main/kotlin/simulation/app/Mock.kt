@@ -121,8 +121,8 @@ object Mock {
                 stateConfig = UserEquipmentStateConfig(
                     taskQueueCapacity = 5,
                     tuNumberOfPackets = listOf(1, 3, 2),
-                    cpuNumberOfSections = listOf(7, 2, 3),
-                    numberOfQueues = 2
+                    cpuNumberOfSections = listOf(4, 2, 3),
+                    numberOfQueues = 3
                 ),
                 componentsConfig = UserEquipmentComponentsConfig(
                     alpha = listOf(0.4, 0.9),
