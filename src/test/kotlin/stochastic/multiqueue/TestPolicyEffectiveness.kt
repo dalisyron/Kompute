@@ -71,12 +71,12 @@ class TestPolicyEffectiveness {
 
         val policyEffectivenessTester = PolicyEffectivenessTester(
             baseSystemConfig = config,
-            alphaRanges = listOf(AlphaRange.Constant(0.10), AlphaRange.Variable(0.01, 0.50, 2), AlphaRange.Constant(0.2)),
+            alphaRanges = listOf(AlphaRange.Variable(0.01, 0.20, 10), AlphaRange.Variable(0.01, 0.20, 10), AlphaRange.Variable(0.01, 0.20, 10)),
             precision = 10,
-            simulationTicks = 4_000_000
+            simulationTicks = 1_000_000
         )
 
-        val result = policyEffectivenessTester.runConcurrent(2)
+        val result = policyEffectivenessTester.run()
         println(result)
     }
 }

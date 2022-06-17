@@ -45,10 +45,6 @@ class TestDoubleQueueEffectivePercent {
             .isWithin(1e-3)
             .of(resultsConcurrent.greedyOffloadFirstEffectivePercent)
 
-        assertThat(resultsSingleThread.stochasticEffectivePercent)
-            .isWithin(1e-3)
-            .of(resultsConcurrent.stochasticEffectivePercent)
-
         println("Single thread running time = $millisSingle | Multi thread running time = $millisConcurrent")
 
         // Run in 5d8cec1: Single thread running time = 218994 | Multi thread running time = 100750
