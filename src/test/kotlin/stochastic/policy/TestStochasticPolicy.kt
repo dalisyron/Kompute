@@ -11,6 +11,7 @@ import simulation.simulation.Simulator
 import core.ue.OffloadingSystemConfig
 import core.ue.OffloadingSystemConfig.Companion.withAlphaSingleQueue
 import core.ue.OffloadingSystemConfig.Companion.withBeta
+import core.ue.OffloadingSystemConfig.Companion.withEtaConfig
 import core.ue.OffloadingSystemConfig.Companion.withEtaConfigSingleQueue
 import core.ue.OffloadingSystemConfig.Companion.withNumberOfPacketsSingleQueue
 import core.ue.OffloadingSystemConfig.Companion.withNumberOfSectionsSingleQueue
@@ -96,6 +97,27 @@ class TestStochasticPolicy {
         )
 
         tester.runTest()
+    }
+
+    @Test
+    fun testCompareFixedEtaDoubleQueue() {
+        var eta0 = listOf(0.0, 0.2, 0.4, 0.6, 0.8, 1.0)
+        var eta1 = listOf(0.0, 0.2, 0.4, 0.6, 0.8, 1.0)
+
+        val simulationTicks = 10_000_000
+        for (e0 in eta0) {
+            for (e1 in eta1) {
+                val config = Mock.doubleConfigHeavyLight().withEtaConfig(listOf(e0, e1)).withTaskQueueCapacity(20)
+                val simulator = Simulator(config)
+                val optimalPolicy = RangedOptimalPolicyFinder.findOptimalPolicyWithGivenEta(config)
+
+                val averageDelayEstimate = optimalPolicy.averageDelay
+                val simulationReport = simulator.simulatePolicy(optimalPolicy, simulationTicks)
+                val averageDelaySimulation = simulationReport.averageDelay
+
+                println("eta = [$e0, $e1] | delay estimate = $averageDelayEstimate | delay simulation = $averageDelaySimulation | error = ${averageDelayEstimate - averageDelaySimulation}")
+            }
+        }
     }
 
     @Test
